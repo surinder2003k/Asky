@@ -1,6 +1,6 @@
 # Asky — AI Chat Assistant
 
-Asky is a ChatGPT-style mobile AI assistant built with **Expo (React Native)**. It requires **no account or login** — users drop in their own API keys (stored locally on the device) and start chatting immediately. A hidden built-in key makes the app usable out of the box for the Nvidia NIM provider.
+Asky is a ChatGPT-style mobile AI assistant built with **Expo (React Native)**. It requires **no account or login** — users drop in their own API keys (stored locally on the device) and start chatting immediately. A hidden built-in key makes the app usable out of the box for the Nvidia NIM provider. The app icon is a minimal ChatGPT-style mark: a solid white speech bubble on a pure black background.
 
 ## Features
 

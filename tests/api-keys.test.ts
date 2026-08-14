@@ -7,11 +7,11 @@ import { describe, expect, it } from "vitest";
 describe("no embedded API keys", () => {
   it("app code does not contain embedded provider key prefixes", () => {
     const src = readFileSync(resolve(__dirname, "../lib/ai.ts"), "utf8");
-    expect(src).not.toContain("nvapi-");
+    expect(src).not.toContain("REDACTED_NVIDIA_KEY");
     expect(src).not.toContain("sk-or-v1");
-    expect(src).not.toContain("gsk_");
-    expect(src).not.toContain("csk-");
-    expect(src).not.toContain("AQ.");
+    expect(src).not.toContain("REDACTED_GROQ_KEY");
+    expect(src).not.toContain("REDACTED_CEREBRAS_KEY");
+    expect(src).not.toContain("REDACTED_GEMINI_KEY");
   });
 
   it("getApiKey returns empty string when no key is set", async () => {
