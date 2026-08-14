@@ -1,0 +1,30 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Default to the dark palette (ChatGPT-style) until the theme provider loads the
+   persisted choice. The provider overrides these variables once hydrated.
+   Only affects web SSR/pre-hydration; native ignores this entirely. */
+:root {
+  --color-primary: #10a37f;
+  --color-background: #212121;
+  --color-surface: #2f2f2f;
+  --color-foreground: #ececec;
+  --color-muted: #9a9a9a;
+  --color-border: #424242;
+  --color-success: #4ade80;
+  --color-warning: #fbbf24;
+  --color-error: #f87171;
+}
+
+html[data-theme="light"] {
+  --color-primary: #10a37f;
+  --color-background: #ffffff;
+  --color-surface: #f9f9f9;
+  --color-foreground: #0d0d0d;
+  --color-muted: #6e6e80;
+  --color-border: #e5e5e5;
+  --color-success: #22c55e;
+  --color-warning: #f59e0b;
+  --color-error: #ef4444;
+}
