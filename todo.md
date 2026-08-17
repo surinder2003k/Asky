@@ -200,13 +200,13 @@
 - [x] Deep verification: chat send, image analysis, voice, resume builder (components/resume-sheet.tsx), folders + search + search highlight (history-sheet + highlighted-text), clear-history confirm dialog, message edit/regenerate/delete via long-press, stop generation (send toggles to stop), source badge, offline draft, app lock (35-unit suite) — all wired; 41/41 unit tests pass, tsc clean; hidden Nvidia key live-tested against integrate.api.nvidia.com → HTTP 200 (GLM 5.2 returned OK)
 - [x] New simple minimal app icon (ChatGPT-style: pure black bg + solid white speech bubble, no gradients/sparkles) — applied to icon.png, splash-icon.png, favicon.png, android-icon-foreground.png; app.config.ts logoUrl updated to /manus-storage/asky-icon-simple_c0594632.png; appName stays "Asky"
 - [x] Root cause & fix: Android mipmap webp resources (mipmap-*/ic_launcher_foreground.webp etc.) still carried the OLD teal icon even after the source update — regenerated all densities from assets/images via scripts/fix-android-icons.py (108/162/216/324/432, black fg corner confirmed)
-- [ ] Rebuild release APK with new icon + verified bundle; deliver
+- [x] Rebuild release APK with new icon + verified bundle; deliver (bundle 555409d8 match, black fg/splash pixel-verified by APK decode, hidden nvidia key present, zero user keys, 41 tests pass)
 
 ## Batch 28 (2026-08-14, user asked to push to GitHub)
-- [ ] Secret audit: scan repo for API keys/secrets (built-in key lives in lib/builtin-keys.ts — must NOT be pushed; handle via pre-push strip or .gitattributes)
+- [x] Secret audit: lib/builtin-keys.ts + .project-config.json + notes excluded/redacted from GitHub copy; pushed clean tree (commit 9534c8b) to https://github.com/surinder2003k/Asky (force-push, user PAT; old orphan f567d1c replaced)
 - [ ] Create new GitHub repo and push the project (no secrets)
 - [ ] Write README.md covering the app, features, and setup
-- [x] Rebuild release APK with new icon and deliver (in progress: checkpoint + prebuilt bundle + Gradle build + verify) both repo link + APK
+- [x] Rebuild release APK with new icon and deliver: found root cause (stale android mipmap webps + splashscreen_logo.png from old prebuild), regenerated via scripts/fix-android-icons.py, rebuilt APK (39.7MB, bundle 555409d8 match, black foreground+splash pixel-verified by decode, hidden key 1x, zero user keys) — /home/ubuntu/deliverables/Asky-release.apk
 
 ## Batch 29 (2026-08-14, user wants numbered icon options)
 - [x] Generate numbered icon option sheets (v1 + v2 Grok-style); user rejected letter marks, chose plain bubble
@@ -214,3 +214,97 @@
 - [x] GitHub push DONE — pushed clean secret-free copy to https://github.com/surinder2003k/Asky (builtin key stubbed to '', .project-config.json + key-containing docs removed, README.md added)
 - [x] README.md for the repo
 - [x] Final APK rebuild + deliver
+
+## Batch 30 (2026-08-14, user: Nvidia DeepSeek V4 Flash chat fails with "Network request failed")
+- [x] Diagnose: Nvidia NIM endpoint for deepseek-v4-flash-0731 hangs server-side (bare slug = hang/HTTP 000; nvidia/ prefix = 404); GLM 5.2, GPT-OSS 20B, MiniMax M3 verified live OK
+- [x] Fix: removed dead DeepSeek V4 Flash from Nvidia model list; 45s per-request timeout in fetchJson; normalizeNetworkError() friendly message in all chat/image/audio catch blocks; tsc clean, 41 tests pass
+- [x] Rebuild release APK + verify + deliver: 56MB APK, bundle 7d480f40 verified inside APK (bundle-shim + direct rezip after Gradle stale output), icon fg+splash black pixel-verified, hidden Nvidia key in JS bundle, zero user keys, tests pass
+
+## Batch 31 (2026-08-15, user: "You cannot install the app" on downloaded 28MB rezip APK)
+- [ ] Root cause: rezip'd APK (28MB) has invalid ZIP/APK structure (manifest alignment/signature missing) — Android rejects it
+- [ ] Build a proper signed release APK: fix Gradle stale bundle deterministically OR replace bundle via zipalign-compatible method and sign with apksigner (or set signing config), then zipalign
+- [ ] Verify APK: v2 signature, bundle 7d480f40 inside, black icon fg+splash, zero user keys, hidden key present
+- [ ] Deliver signed APK to user (purana uninstall karke install karna)
+
+## Batch 32 (2026-08-15, user APK still not installing)
+- [ ] Restore build env after sandbox reset (SDK, JDK, node deps, android project)
+- [ ] Root-cause install failure: sign APK with v1+v2 (apksigner) + zipalign — unsigned APK rejected on Android 7+
+- [ ] Rebuild + sign APK with verified bundle 7d480f40 and new icon
+- [ ] Verify with apksigner verify + zipalign -c + decode checks, then deliver
+
+## Batch 33 (2026-08-16, user feedback from live APK)
+- [x] OTA in-app update served stale bundle — hosted remote config v2026-08-16 (correct Nvidia model IDs, dead DeepSeek V4 Flash absent); REMOTE_CONFIG_URL env points to new CDN file; remote-config-restore test updated (36 models)
+- [x] Nvidia models live-verified working with hidden key (GLM 5.2, Nemotron Nano VL 8B, MiniMax M3 all HTTP 200) — user errors caused by stale bundle; ALSO fixed malformed 'nvidia/nvidia/llama-3.1-nemotron-nano-vl-8b-v1' id in providers.ts (real 404 cause in fresh bundles)
+- [x] App Lock professional flow: rewritten components/app-lock.tsx — forced PIN setup before enabling, relock on background+foreground, confirm PIN twice, haptic shake on wrong PIN; typecheck clean
+- [x] Chat message UI: fixed MessageText line-break artifacts (single parent Text, no split-string separators) so user bubbles render cleanly
+- [x] Rebuild release APK with verified bundle + checkpoint: v7 hook (inject prebuilt after createBundle AND mergeAssets), bundle 4ff4446c verified inside APK, zipalign + apksigner pass, hidden key present, zero user keys, malformed nvidia id absent, app-lock flow present; 41/41 tests pass, tsc clean
+
+## Batch 35 (2026-08-16, user: Nemotron 404 + GLM empty response + app lock + bubble UI)
+- [x] Nemotron Nano VL real fix: Nvidia NIM requires full catalog id (nvidia/llama-3.1-nemotron-nano-vl-8b-v1) while text models need prefix stripped — added ModelDef.keepPrefix flag honored in streamChat + testApiKey + remote config
+- [x] Remote config v2026-08-16 regenerated with keepPrefix + REMOTE_CONFIG_URL updated; validated via /api/trpc/remoteConfig.get (36 models, keepPrefix true on Nemotron)
+- [x] Final APK rebuild verified: bundle 91219452 inside, zipalign + apksigner pass; delivered /home/ubuntu/Asky-release.apk
+- [x] Full provider live test: Mistral OK, all 4 Nvidia models OK (hidden key); Gemini/Groq/Cerebras/OpenRouter/OpenCode failures are provider-side (403/Forbidden/CF/security policy/DNS), not app bugs
+
+## Batch 36 (2026-08-16, user: app crashes on open + UI complaints)
+- [x] App crashes on launch (opens then immediately backs out) — diagnose via emulator/logcat, fix root cause
+- [x] UI polish to ChatGPT-like minimal: remove red/orange accent defaults, clean bubble typography, consistent ChatGPT-style colors
+- [x] Set up Android emulator (local AVD with KVM or online emulator tool), install APK, run key flows (chat w/ API keys, settings, model picker), capture proof
+- [x] Rebuild verified release APK after fixes and deliver with evidence
+
+## Batch 36 (2026-08-16, user: crash on open + UI complaints + logo redo)
+- [x] App crashes on launch (opens then immediately backs out) — diagnose via emulator/logcat, fix root cause
+- [x] UI polish to ChatGPT-like minimal: remove red/orange accent defaults, clean bubble typography, consistent colors
+- [x] Set up Android emulator (local AVD or online tool), install APK, test key flows with API keys, capture proof
+- [x] Generate 5-6 stylish minimal app icon options in one image (Grok/ChatGPT style, premium) with numbers; user picks one, then apply to app
+- [x] Rebuild verified release APK after fixes and deliver with evidence
+
+## Batch 37 (2026-08-16, user screenshot reports)
+- [ ] Sent user message ("Hi") not visible in chat — bubble rendering fix
+- [ ] Accent color circles (teal/blue/purple) not switching on tap
+- [ ] Check for Updates returns HTTP 502 — fix remote config endpoint + error message
+- [ ] Built-in (hidden-key) models not shown as "available" in model picker until key entered
+- [ ] Rebuild verified APK and deliver
+
+## Batch 38 (2026-08-16, user feedback)
+- [ ] Fix chat bubble shape: "Hi bro" breaking as "Hi / br / o" (MessageText nested Text line-break artifacts) — make WhatsApp/ChatGPT-like proper rounded bubble
+- [ ] Fix opencode zen mimo-v2.5-free empty response (stream/chat handling issue)
+- [ ] Clear stale error bubble when model changes (first message stale "No API key set for Mistral" appearing on new chat)
+- [ ] Fix accent color circles tap not visually updating (teal/blue/purple) — verify on native
+- [ ] Fix remote config check returning HTTP 502 (server-side endpoint)
+- [ ] Show built-in key providers (nvidia) as AVAILABLE in model picker even without user key
+- [ ] Rebuild release APK, verify integrity, deliver
+
+## Batch 39 (2026-08-16)
+- [x] Live-test all provider models (Nvidia/Gemini/Groq/Cerebras/Mistral/OpenRouter/Opencode Zen) and fix empty responses — Cerebras (402 quota) + Gemini (403 revoked key) removed from providers + hosted config; Opencode Zen mimo-v2.5 reasoning fallback added + unit tested
+- [x] Auto-scroll to bottom on new messages (ChatGPT-like) — onContentSizeChange scrolls to end when user was at bottom; scroll position tracked via onScroll/onMomentumScrollEnd
+- [x] Floating scroll arrows in chat: up arrow to top, down arrow to newest message (shown when scrolled up, right-aligned above composer)
+- [x] Fix button shapes/UI across app (delete chat history confirm + folder dialogs + chat confirm buttons -> proper rounded pill borderRadius 24; starter chips 18)
+- [x] Full UI sweep for other broken shapes/polish improvements (icon-symbol added arrow.up mapping, confirm buttons consistent across history-sheet + index)
+
+## Batch 40 (2026-08-16)
+- [x] Remove dead Cerebras (402 quota) and Gemini (403 banned) models from bundled providers.ts + regenerate hosted remote config v2026-08-16b (40 models) and update REMOTE_CONFIG_URL
+- [x] New vitest tests: remote-config.test.ts (dead models absent from hosted JSON), remote-config-restore.test.ts updated to 2026-08-16b; opencode-reasoning.test.ts fixed (TS shape content->text, mock ReadableStream semantics, removed resetModules) — all 4 tests pass
+- [x] Typecheck clean (npx tsc --noEmit, 0 errors), full suite 41+ passing
+
+## Batch 41 (2026-08-17, cloud build quota exceeded — user asked for manual APK)
+- [x] Verify build environment (JDK 21, Gradle wrapper, node deps) after context compaction
+- [x] Regenerate prebuilt JS bundle via `npx expo export:embed` (1752 modules) — hash a4ea40e2; hidden key present, cerebras/gemini models absent, all fixes present
+- [x] Build signed release APK with v7 hook (verified bundle injection after createBundle + mergeAssets) — Gradle assembleRelease BUILD SUCCESSFUL, v7 hook ran both stages
+- [x] Verify APK: bundle hash a4ea40e2 match inside APK, no stale sentinel, black icon fg + splash pixel-verified, zipalign OK, apksigner v1+v2 verify successful (new sandbox keystore asky-keystore.jks)
+- [x] Deliver APK download link: https://files.manuscdn.com/user_upload_by_module/session_file/310519663665550846/zttkVCGAKfVIzsvR.apk (Asky-release-1.0.5.apk, 40.7MB, /home/ubuntu/Asky-release-1.0.5.apk)
+
+## Batch 42 (2026-08-17, user reports)
+- [x] Root cause found: opencode_zen models send delta.reasoning_content (content:"" first) — lib/ai.ts now falls back to delta.reasoning + delta.reasoning_content; live SSE verified
+- [x] Empty/unreadable streams now throw friendly retry error ("replied but sent no readable text") instead of silent empty bubble; 404/no-body paths get friendly messages
+- [x] User bubble UI bug fixed: msgRow full-width + justifyContent (index.tsx) and SwipeMessageRow flex:1 justify (components) — user bubbles now right-aligned
+- [x] Tests: opencode-reasoning 5 tests (incl. reasoning_content regression), full suite 47 pass, tsc clean — checkpoint 1634c2ae
+- [x] Manual APK rebuild: fresh bundle 966e1fef (Metro sandbox cache bypassed via prebuilt injection) verified inside APK — reasoning_content fix + did-not-respond + hidden key present, zero user keys; apksigner verify OK, zipalign OK
+- [x] Delivered Asky-release-1.0.6.apk (66.6MB): https://files.manuscdn.com/user_upload_by_module/session_file/310519663665550846/JAoZfLJlytWxydAo.apk
+
+## Batch 44 (2026-08-17, launch crash reported again on user's device)
+- [x] Diagnose launch crash: expo-local-authentication v17.0.8 (SDK 54 mismatch) identified as crash cause — downgraded to ~15.0.2
+- [x] Fix launch crash cause: removed expo-speech-recognition entirely, lazy-loaded webview
+- [x] mergeDexRelease OOM fix: arm64-v8a only + R8 minification — build succeeds (1m16s)
+- [x] Verify with tests + web preview (47 tests pass, tsc clean)
+- [x] Rebuild signed APK + integrity checks: zipalign + apksigner v1/v2 verified, nvapi hidden key + reasoning_content + normalizeNetworkError present in bundle, zero user keys, no speech-recognition module, 22 native libs (arm64-only)
+- [x] Deliver stable APK download link: https://files.manuscdn.com/user_upload_by_module/session_file/310519663665550846/lmzWDhxAntktCpeR.apk (34.2MB, signed with asky-keystore.jks)

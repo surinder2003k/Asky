@@ -12,11 +12,14 @@ describe("remote config restore", () => {
     expect(res.status).toBe(200);
     const config = await res.json();
     expect(config).toMatchObject({
-      version: "2026-08-12",
+      version: "2026-08-16b",
     });
-    // The restored baseline is exactly 37 models (the demo pushed a 38th on a
-    // separate test URL, which is why version "2026-08-12-test" exists there).
+    // Regenerated 2026-08-16: dead Nvidia DeepSeek V4 Flash removed, Nvidia
+    // model IDs corrected (was "nvidia/nvidia/..." which caused 404s), and
+    // all dead Cerebras (402 quota) / Gemini (403 denied) models removed.
     const models: unknown[] = config.models ?? config.profiles ?? [];
-    expect(models.length).toBe(37);
+    expect(models.length).toBe(40);
+    expect(config.models.find((m: { id: string }) => m.id === "nvidia/z-ai/glm-5.2")).toBeTruthy();
+    expect(config.models.filter((m: { id: string }) => m.id.startsWith("cerebras/") || m.id.startsWith("gemini/")).length).toBe(0);
   });
 });

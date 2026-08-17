@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   KeyboardAvoidingView,
@@ -79,6 +79,13 @@ export function SettingsModal({ visible, onClose, onSaved, onImported }: Setting
     status?: "checking" | "success" | "uptodate" | "error";
     message?: string;
   }>({ loading: false });
+  const [savedMsg, setSavedMsg] = useState<string | null>(null);
+  const savedTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  function showSaved(label: string) {
+    setSavedMsg(label);
+    if (savedTimer.current) clearTimeout(savedTimer.current);
+    savedTimer.current = setTimeout(() => setSavedMsg(null), 1500);
+  }
   const [currentVersion, setCurrentVersion] = useState<string | null>(null);
   const [systemPromptText, setSystemPromptText] = useState("");
   const [exportState, setExportState] = useState<{ loading: boolean; message?: string; ok?: boolean }>({ loading: false });
@@ -216,6 +223,24 @@ export function SettingsModal({ visible, onClose, onSaved, onImported }: Setting
                 <IconSymbol name="xmark" size={20} color={colors.muted} />
               </Pressable>
             </View>
+            {savedMsg ? (
+              <View className="items-center mt-2">
+                <View
+                  style={{
+                    backgroundColor: colors.success + "22",
+                    borderColor: colors.success + "55",
+                    borderWidth: 1,
+                    borderRadius: 999,
+                    paddingHorizontal: 12,
+                    paddingVertical: 5,
+                  }}
+                >
+                  <Text className="text-xs font-semibold" style={{ color: colors.success }}>
+                    ✓ {savedMsg}
+                  </Text>
+                </View>
+              </View>
+            ) : null}
             <Text className="text-xs text-muted mt-1">
               Add your API keys. Keys are stored only on this device.
             </Text>
@@ -239,7 +264,9 @@ export function SettingsModal({ visible, onClose, onSaved, onImported }: Setting
                 <Pressable
                   onPress={() => {
                     haptic();
-                    setColorScheme(colorScheme === "dark" ? "light" : "dark");
+                    const next = colorScheme === "dark" ? "light" : "dark";
+                    setColorScheme(next);
+                    showSaved(next === "dark" ? "Dark mode on" : "Light mode on");
                   }}
                   style={({ pressed }) => [
                     styles.testBtn,
@@ -269,6 +296,7 @@ export function SettingsModal({ visible, onClose, onSaved, onImported }: Setting
                       onPress={() => {
                         haptic();
                         setAccent(key);
+                        showSaved(`Accent set to ${key}`);
                       }}
                       style={({ pressed }) => [pressed && { transform: [{ scale: 0.95 }], opacity: 0.85 }]}
                     >
@@ -308,6 +336,7 @@ export function SettingsModal({ visible, onClose, onSaved, onImported }: Setting
                       onPress={() => {
                         haptic();
                         setColorThemeLocal(key);
+                        showSaved(`Theme set to ${key}`);
                       }}
                       style={({ pressed }) => [pressed && { transform: [{ scale: 0.95 }], opacity: 0.85 }]}
                     >

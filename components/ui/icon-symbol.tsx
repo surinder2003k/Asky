@@ -21,6 +21,7 @@ type IconSymbolName =
   | "chevron.down"
   | "chevron.up"
   | "arrow.down.circle.fill"
+  | "arrow.up.circle.fill"
   | "ellipsis.bubble.fill"
   | "sparkles"
   | "doc.on.doc"
@@ -102,6 +103,7 @@ const MAPPING = {
   "chevron.down": "keyboard-arrow-down",
   "chevron.up": "keyboard-arrow-up",
   "arrow.down.circle.fill": "arrow-circle-down",
+  "arrow.up.circle.fill": "arrow-circle-up",
   "ellipsis.bubble.fill": "chat",
   "sparkles": "auto-awesome",
   "pencil": "edit",

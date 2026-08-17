@@ -732,7 +732,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
+    borderRadius: 24,
     paddingVertical: 11,
   },
 });

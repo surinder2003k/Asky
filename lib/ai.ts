@@ -48,9 +48,32 @@ export async function getBase(providerKey: string): Promise<string> {
   return builtinBase(providerKey);
 }
 
+const TIMEOUT_MS = 45_000; // per-request cap; hung providers show a friendly error instead of RN's generic "Network request failed"
+
 async function fetchJson(url: string, init: RequestInit): Promise<Response> {
-  const res = await fetch(url, { ...init, signal: init.signal });
-  return res;
+  const { signal } = init;
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timedOut = false;
+  const timeoutSignal = new AbortController();
+  // Unified signal: whichever fires first (caller cancel or timeout) aborts.
+  const combined = () => {
+    if (signal?.aborted) timeoutSignal.abort();
+    if (timedOut) timeoutSignal.abort();
+  };
+  signal?.addEventListener?.("abort", combined);
+  // Provider-level timeout so a hung server shows a friendly error instead of
+  // a generic "Network request failed" after RN's own (very long) default.
+  timer = setTimeout(() => {
+    timedOut = true;
+    timeoutSignal.abort();
+  }, TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { ...init, signal: timeoutSignal.signal });
+    (res as unknown as { _timedOut?: boolean })._timedOut = timedOut;
+    return res;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 async function streamOpenAiCompatible(params: {
@@ -117,7 +140,7 @@ async function streamOpenAiCompatible(params: {
       return streamOpenAiCompatible({ ...params, modelId: bare });
     }
     throw new Error(
-      `Model "${modelId}" returned an empty response. It may be temporarily unavailable — try another model.`,
+      `Model "${modelId}" did not respond — the provider's server is overloaded or your connection dropped before the reply started. Wait a minute and retry, or switch to another model.`,
     );
   }
 
@@ -139,7 +162,16 @@ async function streamOpenAiCompatible(params: {
       if (data === "[DONE]") return full;
       try {
         const json = JSON.parse(data);
-        const delta = json.choices?.[0]?.delta?.content;
+        let delta: unknown = json.choices?.[0]?.delta?.content;
+        // OpenCode Zen reasoning-heavy models (e.g. mimo-v2.5-free, deepseek-
+        // v4-flash-free) often send null/empty `content` chunks and emit the
+        // answer via `delta.reasoning` or `delta.reasoning_content` instead.
+        // Falling back to reasoning avoids an empty reply bubble.
+        if ((typeof delta !== "string" || !delta) && providerKey === "opencode_zen") {
+          delta =
+            json.choices?.[0]?.delta?.reasoning ??
+            json.choices?.[0]?.delta?.reasoning_content;
+        }
         if (typeof delta === "string" && delta) {
           full += delta;
           onToken(delta);
@@ -148,6 +180,11 @@ async function streamOpenAiCompatible(params: {
         // skip malformed chunk
       }
     }
+  }
+  if (!full.trim()) {
+    throw new Error(
+      `Model "${modelId}" replied but sent no readable text. This usually means the provider is overloaded right now — wait a minute and retry, or switch to another model.`,
+    );
   }
   return full;
 }
@@ -227,7 +264,7 @@ async function streamGemini(params: {
   return full;
 }
 
-function getProviderLabel(key: string): string {
+export function getProviderLabel(key: string): string {
   return PROVIDERS.find((p) => p.key === key)?.label ?? key;
 }
 
@@ -259,7 +296,7 @@ export async function streamChat(params: {
   return streamOpenAiCompatible({
     providerKey: model.providerKey,
     apiKey,
-    modelId: model.id.slice(model.providerKey.length + 1),
+    modelId: model.keepPrefix ? model.id : model.id.slice(model.providerKey.length + 1),
     messages: params.messages,
     image: params.image ?? null,
     onToken: params.onToken,
@@ -517,7 +554,7 @@ export async function testApiKey(providerKey: string, apiKey: string): Promise<{
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: model.id.slice(providerKey.length + 1),
+        model: model.keepPrefix ? model.id : model.id.slice(providerKey.length + 1),
         messages: [{ role: "user", content: "Say OK" }],
         max_tokens: 10,
       }),
@@ -530,6 +567,20 @@ export async function testApiKey(providerKey: string, apiKey: string): Promise<{
   } catch (e) {
     return { ok: false, message: `Network error: ${e instanceof Error ? e.message : String(e)}` };
   }
+}
+
+/**
+ * Normalize raw native fetch errors. React Native's fetch throws a TypeError
+ * with message "Network request failed" for hung/unreachable servers — surface
+ * a friendly hint instead of the raw message.
+ */
+export function normalizeNetworkError(raw: unknown, providerKey?: string): string {
+  const text = raw instanceof Error ? raw.message : String(raw);
+  if (/Network request failed/i.test(text)) {
+    const label = providerKey ? getProviderLabel(providerKey) : "provider";
+    return `Could not reach ${label} — the server is hanging or your connection is off. Try another model or check your internet and retry.`;
+  }
+  return text;
 }
 
 /** Human-friendly decoding for OpenAI-style (Nvidia/Groq/Cerebras/Mistral/OpenRouter/Zen) errors. */
