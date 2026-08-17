@@ -16,6 +16,12 @@ export function getConfigUrl(): string {
 }
 export const REMOTE_CONFIG_URL = getConfigUrl();
 
+// Direct CDN source of the hosted config (same file the server proxies).
+// Fetching it directly makes update checks immune to the API gateway being
+// temporarily unhealthy (HTTP 502).
+export const HOSTED_CONFIG_CDN_URL =
+  "https://files.manuscdn.com/user_upload_by_module/session_file/310519663665550846/qbGCDyrxOHviqHRq.json";
+
 const STORAGE_KEY = "aic_app:remoteConfig";
 const VERSION_KEY = "aic_app:remoteConfigVersion";
 
@@ -57,19 +63,35 @@ export async function getCachedVersion(): Promise<string | null> {
 }
 
 /**
- * Fetch the hosted config, apply it if it's newer, and persist it.
- * Returns { applied, version, error }.
+ * Fetch the config from a URL (CDN or gateway) and return the parsed payload,
+ * or null when the source is unavailable. CDN returns the plain JSON; the
+ * gateway wraps it in a superjson envelope.
  */
+async function fetchConfig(url: string): Promise<unknown> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) return null;
+    const raw = await res.json();
+    // tRPC gateway wraps the result in a superjson envelope
+    return raw?.result?.data?.json ?? raw;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function checkForUpdates(): Promise<{ applied: boolean; version: string | null; error?: string }> {
   try {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 15000);
-    const res = await fetch(getConfigUrl(), { signal: controller.signal });
-    clearTimeout(timer);
-    if (!res.ok) return { applied: false, version: null, error: `HTTP ${res.status}` };
-    // tRPC endpoint wraps the result in a superjson envelope: { result: { data: { json: ... } } }
-    const envelope = await res.json();
-    const data = envelope?.result?.data?.json ?? envelope;
+    // Try the direct CDN URL first (always up, no gateway dependency), then
+    // fall back to the app's own gateway endpoint.
+    let data = await fetchConfig(HOSTED_CONFIG_CDN_URL);
+    if (!data || !isValidConfig(data)) {
+      data = await fetchConfig(getConfigUrl());
+    }
+    if (!data || !isValidConfig(data)) return { applied: false, version: null, error: data ? "Invalid config format" : "No config received" };
     if (!isValidConfig(data)) return { applied: false, version: null, error: "Invalid config format" };
 
     const current = await getCachedVersion();

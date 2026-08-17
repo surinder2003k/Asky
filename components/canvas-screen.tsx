@@ -1,7 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { WebView } from "react-native-webview";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
@@ -20,6 +19,8 @@ interface CanvasScreenProps {
  * Used to open generated code (HTML) in an editable panel so the user
  * can tweak and instantly preview, then copy or continue chatting.
  */
+
+
 export function CanvasScreen({ visible, onClose, initialText = "", onApply }: CanvasScreenProps) {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -130,17 +131,7 @@ export function CanvasScreen({ visible, onClose, initialText = "", onApply }: Ca
             </ScrollView>
           ) : (
             <View style={{ flex: 1, margin: 12 }}>
-              <WebView
-                originWhitelist={["*"]}
-                source={{ html }}
-                style={{ backgroundColor: "#ffffff" }}
-                startInLoadingState
-                renderLoading={() => (
-                  <View style={styles.loadingCenter}>
-                    <ActivityIndicator color={colors.primary} />
-                  </View>
-                )}
-              />
+              <LazyCanvasWebview html={html} primaryColor={colors.primary} />
             </View>
           )}
 
@@ -162,6 +153,38 @@ export function CanvasScreen({ visible, onClose, initialText = "", onApply }: Ca
         </View>
       </KeyboardAvoidingView>
     </Modal>
+  );
+}
+
+/**
+ * Renders the webview only when mounted and resolves the native module lazily,
+ * so `react-native-webview` is NEVER registered at app startup (startup crash source).
+ */
+function LazyCanvasWebview({ html, primaryColor }: { html: string; primaryColor: string }) {
+  const [Wv, setWv] = useState<React.ComponentType<{
+    originWhitelist: string[];
+    source: { html: string };
+    style: Record<string, unknown>;
+    startInLoadingState: boolean;
+    renderLoading: () => React.JSX.Element;
+  }> | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    setWv(require("react-native-webview").WebView);
+  }, []);
+  if (!Wv) return <View style={{ flex: 1, alignItems: "center", justifyContent: "center" }} />;
+  return (
+    <Wv
+      originWhitelist={["*"]}
+      source={{ html }}
+      style={{ backgroundColor: "#ffffff" }}
+      startInLoadingState
+      renderLoading={() => (
+        <View style={styles.loadingCenter}>
+          <ActivityIndicator color={primaryColor} />
+        </View>
+      )}
+    />
   );
 }
 

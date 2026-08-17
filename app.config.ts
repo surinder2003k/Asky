@@ -30,7 +30,7 @@ const env = {
   // App branding - update these values directly (do not use env vars)
   appName: "Asky",
   appSlug: "ai_chat_app",
-  logoUrl: "/manus-storage/asky-icon-simple_c0594632.png",
+  logoUrl: "https://files.manuscdn.com/user_upload_by_module/session_file/310519663665550846/CVhouZOfftoWhRWU.png",
   scheme: schemeFromBundleId,
   iosBundleId: bundleId,
   androidPackage: bundleId,
@@ -54,7 +54,7 @@ const config: ExpoConfig = {
   },
   android: {
     adaptiveIcon: {
-      backgroundColor: "#E6F4FE",
+      backgroundColor: "#050505",
       foregroundImage: "./assets/images/android-icon-foreground.png",
       backgroundImage: "./assets/images/android-icon-background.png",
       monochromeImage: "./assets/images/android-icon-monochrome.png",

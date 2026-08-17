@@ -1,10 +1,8 @@
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { Modal, Pressable, StyleSheet, Text, View } from "react-native";
 import * as Clipboard from "expo-clipboard";
 import * as Haptics from "expo-haptics";
 import { Platform } from "react-native";
-import { WebView } from "react-native-webview";
-
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { useFontSize } from "@/lib/font-size";
@@ -240,8 +238,18 @@ export function splitSegments(text: string, userMessage?: boolean): React.ReactN
       i = j - 1;
       continue;
     }
-    nodes.push(<Text key={key++}>{inlineFormat(line)}</Text>);
-    if (i < lines.length - 1) nodes.push("\n");
+    if (userMessage) {
+      // User bubbles render as one flat text per line to avoid Android's
+      // erratic line-break artifacts with many nested Text children
+      // (e.g. "Hi br o" splitting). Bold markers are stripped and rendered plain.
+      nodes.push(<Text key={key++}>{line.replace(/\*\*/g, "")}</Text>);
+      if (i < lines.length - 1) nodes.push(<Text key={key++}>{"\n"}</Text>);
+    } else {
+      // Nested <Text> children must all be Text nodes — plain string children
+      // inside a nested Text cause erratic line-break artifacts on Android.
+      nodes.push(<Text key={key++}>{inlineFormat(line)}</Text>);
+      if (i < lines.length - 1) nodes.push(<Text key={key++}>{"\n"}</Text>);
+    }
   }
   return nodes;
 }
@@ -452,16 +460,38 @@ function HtmlPreview({ visible, html, onClose }: { visible: boolean; html: strin
         {Platform.OS === "web" ? (
           <iframe srcDoc={html} style={styles.previewFrame as never} sandbox="allow-scripts" />
         ) : (
-          <WebView
-            originWhitelist={["*"]}
-            source={{ html }}
-            style={styles.previewFrame}
-            scrollEnabled
-            javaScriptEnabled
-          />
+          <LazyWebFrame html={html} />
         )}
       </View>
     </Modal>
+  );
+}
+
+/**
+ * Renders the webview only when mounted, and resolves the native module lazily
+ * so `react-native-webview` is NEVER registered at app startup (startup crash source).
+ */
+function LazyWebFrame({ html }: { html: string }) {
+  const [Wv, setWv] = useState<React.ComponentType<{
+    originWhitelist: string[];
+    source: { html: string };
+    style: Record<string, unknown>;
+    scrollEnabled?: boolean;
+    javaScriptEnabled?: boolean;
+  }> | null>(null);
+  useEffect(() => {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    setWv(require("react-native-webview").WebView);
+  }, []);
+  if (!Wv) return <View style={styles.previewFrame as never} />;
+  return (
+    <Wv
+      originWhitelist={["*"]}
+      source={{ html }}
+      style={styles.previewFrame}
+      scrollEnabled
+      javaScriptEnabled
+    />
   );
 }
 

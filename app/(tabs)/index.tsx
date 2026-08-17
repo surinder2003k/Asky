@@ -42,8 +42,7 @@ import { KbSheet } from "@/components/kb-sheet";
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useColors } from "@/hooks/use-colors";
 import { setBusyModel } from "@/lib/busy-model";
-import { useVoiceDictation } from "@/hooks/use-voice-dictation";
-import { streamChat, type ImageAttachment, isNvidiaImageModel, isNvidiaAudioModel, generateImage, generateAudio, extractPdfText, getBase } from "@/lib/ai";
+import { streamChat, type ImageAttachment, isNvidiaImageModel, isNvidiaAudioModel, generateImage, generateAudio, extractPdfText, getBase, getProviderLabel, normalizeNetworkError } from "@/lib/ai";
 import { imageToBase64 } from "@/lib/image";
 import { getModel, getModelSourceLabel, MODELS } from "@/lib/providers";
 import { useConnectivity } from "@/lib/use-connectivity";
@@ -272,6 +271,8 @@ export default function ChatScreen() {
   const { colorScheme, setColorScheme } = useThemeContext();
   const [cloudSyncOn, setCloudSyncOn] = useState(false);
   const [scrolledUp, setScrolledUp] = useState(false);
+  const atBottomBeforeSend = useRef(true);
+  const wasScrolledUp = useRef(false);
   const [longPressMsg, setLongPressMsg] = useState<{ id: string; index: number } | null>(null);
   const [editingMsgId, setEditingMsgId] = useState<string | null>(null);
   const [editMsgText, setEditMsgText] = useState("");
@@ -311,24 +312,8 @@ export default function ChatScreen() {
   const listRef = useRef<FlatList<DisplayMessage>>(null);
   const abortRef = useRef<AbortController | null>(null);
   const sendMessageRef = useRef<(() => void) | null>(null);
-  const { isListening, dictError, toggleDictation, stopDictation } = useVoiceDictation();
   const router = useRouter();
   const { fontSize } = useFontSize();
-
-  // When dictation yields a FINAL transcript, send it directly (hold-to-talk voice message).
-  const commitFinalTranscript = useCallback((text: string) => {
-    const trimmed = text.trim();
-    if (!trimmed) return;
-    setModeNotice(null);
-    setInput(trimmed);
-    // Fire send on the next tick so input state is committed first.
-    setTimeout(() => sendMessageRef.current?.(), 60);
-  }, []);
-
-  // Stop dictation whenever a message is being sent.
-  useEffect(() => {
-    if (sending) stopDictation();
-  }, [sending, stopDictation]);
 
   // --- Chat mode apply ---
   const handleApplyMode = useCallback(
@@ -442,21 +427,34 @@ export default function ChatScreen() {
   const refreshKeyAvailability = useCallback(async () => {
     try {
       const { getAllKeys } = await import("@/lib/storage");
-      const { hasUsableKey } = await import("@/lib/builtin-keys");
+      const { hasUsableKey, BUILTIN_KEYS } = await import("@/lib/builtin-keys");
       const keys = await getAllKeys();
       const map: Record<string, boolean> = {};
+      // User-stored keys
       for (const k of Object.keys(keys)) {
         map[k] = await hasUsableKey(k);
+      }
+      // Providers with a hidden built-in key also count as available, even
+      // when the user hasn't added their own key — so their models show as
+      // usable without any manual setup.
+      for (const k of Object.keys(BUILTIN_KEYS)) {
+        if (!(k in map)) map[k] = await hasUsableKey(k);
       }
       setKeyAvailability(map);
     } catch {
       // Non-fatal: picker simply shows no badges
     }
   }, []);
+  // Refresh whenever the settings/history panels open or after a key save,
+  // and once at mount so built-in-key models show as available immediately.
   useEffect(() => {
     if (!settingsOpen && !historyOpen) return;
     refreshKeyAvailability();
   }, [settingsOpen, historyOpen, refreshKeyAvailability]);
+  useEffect(() => {
+    refreshKeyAvailability();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const haptic = useCallback(() => {
     if (Platform.OS !== "web") {
@@ -808,7 +806,16 @@ export default function ChatScreen() {
         appendAssistantText(conv.id, token);
       }, signal: abort.signal });
     } catch (e) {
-      const errorText = e instanceof Error ? e.message : String(e);
+      let errorText = e instanceof Error ? e.message : String(e);
+      // Native fetch throws "Network request failed" (TypeError) for hung or
+      // unreachable servers; show a friendly explanation instead of the raw message.
+      const isUserStop = abort.signal.aborted && errorText.includes("abort");
+      const looksLikeNetworkFailure = /Network request failed/i.test(errorText);
+      if (looksLikeNetworkFailure) {
+        errorText = `Could not reach ${getProviderLabel(getModel(effectiveModelKey)?.providerKey ?? "provider")} — the server is hanging or your connection is off. Try another model or check your internet and retry.`;
+      } else if (isUserStop) {
+        return; // user tapped stop — nothing to report
+      }
       setMessages((prev) => {
         const copy = [...prev];
         copy[copy.length - 1] = { id: `a-${Date.now()}`, role: "assistant", text: errorText, error: true };
@@ -898,7 +905,7 @@ export default function ChatScreen() {
         setDebateNotice("Debate finished");
         setTimeout(() => setDebateNotice(null), 3000);
       } catch (e) {
-        const errorText = e instanceof Error ? e.message : String(e);
+        const errorText = normalizeNetworkError(e, getModel(effectiveModelKey)?.providerKey);
         setMessages((prev) => {
           const copy = [...prev];
           copy[copy.length - 1] = { id: `a-${Date.now()}`, role: "assistant", text: errorText, error: true };
@@ -1215,7 +1222,7 @@ h2{margin:0 0 2px}.p{margin:4px 0}</style></head><body>
           return copy;
         });
       } catch (e) {
-        const errorText = e instanceof Error ? e.message : String(e);
+        const errorText = normalizeNetworkError(e, getModel(effectiveModelKey)?.providerKey);
         await addMessage(conversation.id, { role: "assistant", text: errorText, error: true });
         setMessages((prev) => {
           const copy = [...prev];
@@ -1268,7 +1275,7 @@ h2{margin:0 0 2px}.p{margin:4px 0}</style></head><body>
           return copy;
         });
       } catch (e) {
-        const errorText = e instanceof Error ? e.message : String(e);
+        const errorText = normalizeNetworkError(e, getModel(effectiveModelKey)?.providerKey);
         await addMessage(conversation.id, { role: "assistant", text: errorText, error: true });
         setMessages((prev) => {
           const copy = [...prev];
@@ -1328,7 +1335,7 @@ h2{margin:0 0 2px}.p{margin:4px 0}</style></head><body>
         signal: abort.signal,
       });
     } catch (e) {
-      const errorText = e instanceof Error ? e.message : String(e);
+      const errorText = normalizeNetworkError(e, getModel(effectiveModelKey)?.providerKey);
       setMessages((prev) => {
         const copy = [...prev];
         copy[copy.length - 1] = { id: `a-${Date.now()}`, role: "assistant", text: errorText, error: true };
@@ -1538,7 +1545,7 @@ h2{margin:0 0 2px}.p{margin:4px 0}</style></head><body>
         signal: abort.signal,
       });
     } catch (e) {
-      const errorText = e instanceof Error ? e.message : String(e);
+      const errorText = normalizeNetworkError(e, getModel(effectiveModelKey)?.providerKey);
       setMessages((prev) => {
         const copy = [...prev];
         copy[copy.length - 1] = { id: `a-${Date.now()}`, role: "assistant", text: errorText, error: true };
@@ -1631,7 +1638,7 @@ h2{margin:0 0 2px}.p{margin:4px 0}</style></head><body>
         signal: abort.signal,
       });
     } catch (e) {
-      const errorText = e instanceof Error ? e.message : String(e);
+      const errorText = normalizeNetworkError(e, getModel(effectiveModelKey)?.providerKey);
       setMessages((prev) => {
         const copy = [...prev];
         copy[copy.length - 1] = { id: `a-${Date.now()}`, role: "assistant", text: errorText, error: true };
@@ -1682,7 +1689,12 @@ h2{margin:0 0 2px}.p{margin:4px 0}</style></head><body>
         <View
           style={[
             styles.msgRow,
-            { alignItems: isUser ? "flex-end" : "flex-start", paddingHorizontal: 12, marginVertical: 3 },
+            {
+              alignItems: "flex-end",
+              justifyContent: isUser ? "flex-end" : "flex-start",
+              paddingHorizontal: 12,
+              marginVertical: 3,
+            },
           ]}
         >
           {!isUser && (
@@ -1811,6 +1823,8 @@ h2{margin:0 0 2px}.p{margin:4px 0}</style></head><body>
   function onFlatListScroll(e: { nativeEvent: { contentSize: { height: number }; layoutMeasurement: { height: number }; contentOffset: { y: number } } }) {
     const { contentSize, layoutMeasurement, contentOffset } = e.nativeEvent;
     const nearBottom = contentOffset.y + layoutMeasurement.height >= contentSize.height - 120;
+    atBottomBeforeSend.current = nearBottom;
+    wasScrolledUp.current = !nearBottom;
     if (nearBottom !== !scrolledUp) setScrolledUp(!nearBottom);
   }
 
@@ -1915,26 +1929,6 @@ h2{margin:0 0 2px}.p{margin:4px 0}</style></head><body>
             color: colors.foreground,
           }}
         />
-        <Pressable
-          onPress={() => toggleDictation(commitFinalTranscript)}
-          onLongPress={() => {
-            if (Platform.OS !== "web") Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-            setModeNotice("Voice message mode — release to send");
-            toggleDictation(commitFinalTranscript);
-          }}
-          delayLongPress={300}
-          disabled={sending}
-          style={({ pressed }) => [
-            styles.iconBtn,
-            pressed && { opacity: 0.6 },
-          ]}
-        >
-          <IconSymbol
-            name={isListening ? "mic.fill" : "mic"}
-            size={22}
-            color={isListening ? colors.error : sending ? colors.muted : colors.primary}
-          />
-        </Pressable>
           <Pressable
             onPress={sending ? stopReply : sendMessage}
             disabled={!sending && !input.trim() && !pendingImage && !pendingPdf}
@@ -1981,15 +1975,6 @@ h2{margin:0 0 2px}.p{margin:4px 0}</style></head><body>
             <IconSymbol name="xmark" size={14} color={colors.muted} />
           </Pressable>
         </View>
-      )}
-      {isListening && (
-        <View className="flex-row items-center gap-2 px-3 py-1.5">
-          <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: colors.error }} />
-          <Text className="text-[11px] text-error">Listening… tap the mic again to stop</Text>
-        </View>
-      )}
-      {!isListening && dictError && (
-        <Text className="text-[11px] text-error px-3 pb-1">{dictError}</Text>
       )}
       {continueVisible && !sending && (
         <View className="flex-row justify-center py-1.5" style={{ backgroundColor: colors.background }}>
@@ -2195,7 +2180,13 @@ h2{margin:0 0 2px}.p{margin:4px 0}</style></head><body>
             keyExtractor={(m) => m.id}
             renderItem={renderItem}
             contentContainerStyle={{ paddingVertical: 12 }}
-            onContentSizeChange={() => listRef.current?.scrollToEnd({ animated: false })}
+            onContentSizeChange={(w, h) => {
+              // Auto-scroll to the newest message when it is appended while
+              // the user was already at the bottom (ChatGPT-like behavior).
+              if (atBottomBeforeSend.current || messages.length <= 1) {
+                listRef.current?.scrollToEnd({ animated: false });
+              }
+            }}
             onScroll={onFlatListScroll}
             onMomentumScrollEnd={onFlatListScroll}
             scrollEventThrottle={16}
@@ -2203,18 +2194,30 @@ h2{margin:0 0 2px}.p{margin:4px 0}</style></head><body>
           />
           </>
         )}
-        {/* Floating scroll-to-bottom button */}
+        {/* Floating scroll arrows: up = jump to top, down = jump to newest */}
         {scrolledUp && (
-          <Pressable
-            onPress={() => listRef.current?.scrollToEnd({ animated: true })}
-            style={({ pressed }) => [
-              styles.fab,
-              { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.foreground },
-              pressed && { opacity: 0.8 },
-            ]}
-          >
-            <IconSymbol name="arrow.down.circle.fill" size={22} color={colors.foreground} />
-          </Pressable>
+          <View style={[styles.scrollFabs, { right: 12 }]}>
+            <Pressable
+              onPress={() => listRef.current?.scrollToOffset({ offset: 0, animated: true })}
+              style={({ pressed }) => [
+                styles.fab,
+                { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.foreground },
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <IconSymbol name="arrow.up.circle.fill" size={22} color={colors.foreground} />
+            </Pressable>
+            <Pressable
+              onPress={() => listRef.current?.scrollToEnd({ animated: true })}
+              style={({ pressed }) => [
+                styles.fab,
+                { backgroundColor: colors.surface, borderColor: colors.border, shadowColor: colors.foreground },
+                pressed && { opacity: 0.8 },
+              ]}
+            >
+              <IconSymbol name="arrow.down.circle.fill" size={22} color={colors.foreground} />
+            </Pressable>
+          </View>
         )}
         {composer}
       </KeyboardAvoidingView>
@@ -2647,10 +2650,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 0.5,
   },
-  fab: {
+  scrollFabs: {
     position: "absolute",
     right: 12,
     bottom: 76,
+    gap: 8,
+  },
+  fab: {
     width: 40,
     height: 40,
     borderRadius: 20,
@@ -2683,7 +2689,7 @@ const styles = StyleSheet.create({
   },
   starterBtn: {
     borderWidth: 0.5,
-    borderRadius: 14,
+    borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 12,
   },
@@ -2691,7 +2697,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    borderRadius: 12,
+    borderRadius: 24,
     paddingVertical: 11,
   },
 });

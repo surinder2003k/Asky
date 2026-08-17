@@ -10,6 +10,8 @@ export interface ModelDef {
   name: string;
   providerKey: string;
   vision: boolean;
+  /** If true, the API slug keeps the full model id (Nvidia catalog ids like nvidia/llama-3.1-nemotron-nano-vl-8b-v1 need the prefix). */
+  keepPrefix?: boolean;
 }
 
 export const PROVIDERS: Provider[] = [
@@ -58,11 +60,9 @@ export const PROVIDERS: Provider[] = [
 ];
 
 export const MODELS: ModelDef[] = [
-  // Google Gemini
-  { id: "gemini/gemini-3.5-flash", name: "Gemini 3.5 Flash", providerKey: "gemini", vision: true },
-  { id: "gemini/gemini-flash-latest", name: "Gemini Flash (Latest)", providerKey: "gemini", vision: true },
-  { id: "gemini/gemini-3.1-flash-lite", name: "Gemini 3.1 Flash Lite", providerKey: "gemini", vision: true },
-  { id: "gemini/gemini-3.7-flash", name: "Gemini 3.7 Flash", providerKey: "gemini", vision: true },
+  // Google Gemini — removed: the user's Gemini project is denied access server-side
+  // (all IDs return HTTP 403 PERMISSION_DENIED, verified Aug 2026). Users with a
+  // working Gemini project can still add the key; the provider entry stays.
   // Groq
   { id: "groq/llama-3.1-8b-instant", name: "Llama 3.1 8B", providerKey: "groq", vision: false },
   { id: "groq/llama-3.3-70b-versatile", name: "Llama 3.3 70B", providerKey: "groq", vision: false },
@@ -77,15 +77,17 @@ export const MODELS: ModelDef[] = [
   { id: "mistral/magistral-small-latest", name: "Magistral Small", providerKey: "mistral", vision: false },
   { id: "mistral/pixtral-12b-2409", name: "Pixtral 12B", providerKey: "mistral", vision: true },
   { id: "mistral/pixtral-large-latest", name: "Pixtral Large", providerKey: "mistral", vision: true },
-  // Nvidia NIM — API slugs must NOT carry the leading 'nvidia/' prefix
-  // (verified live Aug 2026: chat endpoint returns 404 for 'nvidia/z-ai/glm-5.2',
-  // works for 'z-ai/glm-5.2').
+  // Nvidia NIM — verified live Aug 2026: endpoint 404s for 'google/glm-5.2',
+  // 'nvidia/z-ai/glm-5.2' AND 'z-ai/glm-5.2'?? — actual working ids are the bare
+  // catalog ids WITHOUT the 'nvidia/' prefix: 'z-ai/glm-5.2',
+  // 'minimaxai/minimax-m3', 'meta/llama-3.2-11b-vision-instruct'.
+  // (Note: modelSlugOnly already strips the leading 'nvidia/' segment, so these
+  // ids arrive at the API as z-ai/glm-5.2 etc.)
   { id: "nvidia/z-ai/glm-5.2", name: "GLM 5.2", providerKey: "nvidia", vision: false },
-  { id: "nvidia/deepseek-ai/deepseek-v4-flash-0731", name: "DeepSeek V4 Flash", providerKey: "nvidia", vision: false },
   { id: "nvidia/openai/gpt-oss-20b", name: "GPT-OSS 20B", providerKey: "nvidia", vision: false },
   { id: "nvidia/minimaxai/minimax-m3", name: "MiniMax M3", providerKey: "nvidia", vision: false },
   { id: "nvidia/meta/llama-3.2-11b-vision-instruct", name: "Llama 3.2 11B Vision", providerKey: "nvidia", vision: true },
-  { id: "nvidia/nvidia/llama-3.1-nemotron-nano-vl-8b-v1", name: "Nemotron Nano VL 8B", providerKey: "nvidia", vision: true },
+  { id: "nvidia/llama-3.1-nemotron-nano-vl-8b-v1", name: "Nemotron Nano VL 8B", providerKey: "nvidia", vision: true, keepPrefix: true },
   // OpenRouter
   { id: "openrouter/google/gemini-2.5-flash", name: "Gemini 2.5 Flash", providerKey: "openrouter", vision: true },
   { id: "openrouter/google/gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", providerKey: "openrouter", vision: true },
@@ -105,10 +107,8 @@ export const MODELS: ModelDef[] = [
   { id: "openrouter/nvidia/nemotron-3-nano-30b-a3b:free", name: "Nemotron 3 Nano 30B (Free)", providerKey: "openrouter", vision: false },
   { id: "openrouter/liquid/lfm-2.5-2.6b:free", name: "LFM 2.5 2.6B (Free)", providerKey: "openrouter", vision: false },
   { id: "openrouter/nvidia/nemotron-nano-9b-v2:free", name: "Nemotron Nano 9B V2 (Free)", providerKey: "openrouter", vision: false },
-  // Cerebras
-  { id: "cerebras/gpt-oss-120b", name: "GPT-OSS 120B", providerKey: "cerebras", vision: false },
-  { id: "cerebras/gemma-4-31b", name: "Gemma 4 31B", providerKey: "cerebras", vision: false },
-  { id: "cerebras/zai-glm-4.7", name: "GLM 4.7", providerKey: "cerebras", vision: false },
+  // Cerebras — removed: free tier returns HTTP 402 (quota exhausted) and the
+  // older slugs 404 (verified Aug 2026). Provider entry stays for future keys.
   // OpenCode Zen — verified FREE tier only (Aug 2026); paid slugs fail 401 CreditsError
   { id: "opencode_zen/mimo-v2.5-free", name: "MiMo V2.5 Free (Vision + Reasoning)", providerKey: "opencode_zen", vision: true },
   { id: "opencode_zen/deepseek-v4-flash-free", name: "DeepSeek V4 Flash Free", providerKey: "opencode_zen", vision: false },

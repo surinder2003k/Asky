@@ -50,8 +50,9 @@ export function SwipeMessageRow({ onSwipeRight, onSwipeLeft, children, align }: 
       style={{
         transform: [{ translateX: swipeX }],
         flexDirection: "row",
+        flex: 1,
         alignItems: "center",
-        alignSelf: align,
+        justifyContent: align === "flex-end" ? "flex-end" : "flex-start",
       }}
       {...responder.panHandlers}
     >
