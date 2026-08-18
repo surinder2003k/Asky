@@ -9,9 +9,15 @@ import {
   Pin,
   MessageSquare,
   X,
+  Download,
+  Link as LinkIcon,
+  FilePlus,
 } from "lucide-react";
+import { useMemo } from "react";
 import { useApp } from "../store";
 import { clearConversations } from "../storage";
+import { decodeShareString, parseSharedMessages, downloadMarkdown, downloadJson, buildShareUrl } from "../export";
+import { exportChatToPdf } from "../pdf";
 
 function timeAgo(ts: number) {
   const d = Math.floor((Date.now() - ts) / 60000);
@@ -45,8 +51,42 @@ export default function Sidebar({
     renameFolder,
     deleteFolder,
     clearConversations,
+    importChat,
   } = useApp();
+  const [showImport, setShowImport] = useState(false);
+  const [importText, setImportText] = useState("");
+  const [shareCopied, setShareCopied] = useState(false);
   const [search, setSearch] = useState("");
+
+  const chatMap = useMemo(() => new Map(chats.map((c) => [c.id, c])), [chats]);
+
+  function handleShare(chatId: string) {
+    const chat = chatMap.get(chatId);
+    if (!chat) return;
+    const url = buildShareUrl(chat);
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 1500);
+      })
+      .catch(() => prompt("Copy this share link:", url));
+  }
+
+  function handleExportMd(chatId: string) {
+    const chat = chatMap.get(chatId);
+    if (chat) downloadMarkdown(chat);
+  }
+
+  function handleExportJson(chatId: string) {
+    const chat = chatMap.get(chatId);
+    if (chat) downloadJson(chat);
+  }
+
+  function handleExportPdf(chatId: string) {
+    const chat = chatMap.get(chatId);
+    if (chat) exportChatToPdf(chat);
+  }
   const [editingFolder, setEditingFolder] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
   const [showClearDialog, setShowClearDialog] = useState(false);
@@ -157,6 +197,10 @@ export default function Sidebar({
                     setEditing={(v) => setEditingTitle(v ? c.id : null)}
                     menuOpen={menuFor === c.id}
                     setMenuOpen={(v) => setMenuFor(v ? c.id : null)}
+                    onExportMd={() => handleExportMd(c.id)}
+                    onExportJson={() => handleExportJson(c.id)}
+                    onExportPdf={() => handleExportPdf(c.id)}
+                    onShare={() => handleShare(c.id)}
                   />
                 ))}
               </div>
@@ -170,23 +214,27 @@ export default function Sidebar({
               </span>
               {pinned.map((c) => (
                 <ChatRow
-                  key={c.id}
-                  chat={c}
-                  active={c.id === activeChatId}
-                  onOpen={() => {
-                    setActiveChatId(c.id);
-                    setMenuFor(null);
-                    onClose();
-                  }}
-                  onRename={(t) => renameChat(c.id, t)}
-                  onDelete={() => deleteChat(c.id)}
-                  onPin={() => togglePin(c.id)}
-                  onMove={(f) => moveChat(c.id, f)}
-                  editing={editingTitle === c.id}
-                  setEditing={(v) => setEditingTitle(v ? c.id : null)}
-                  menuOpen={menuFor === c.id}
-                  setMenuOpen={(v) => setMenuFor(v ? c.id : null)}
-                />
+                    key={c.id}
+                    chat={c}
+                    active={c.id === activeChatId}
+                    onOpen={() => {
+                      setActiveChatId(c.id);
+                      setMenuFor(null);
+                      onClose();
+                    }}
+                    onRename={(t) => renameChat(c.id, t)}
+                    onDelete={() => deleteChat(c.id)}
+                    onPin={() => togglePin(c.id)}
+                    onMove={(f) => moveChat(c.id, f)}
+                    editing={editingTitle === c.id}
+                    setEditing={(v) => setEditingTitle(v ? c.id : null)}
+                    menuOpen={menuFor === c.id}
+                    setMenuOpen={(v) => setMenuFor(v ? c.id : null)}
+                    onExportMd={() => handleExportMd(c.id)}
+                    onExportJson={() => handleExportJson(c.id)}
+                    onExportPdf={() => handleExportPdf(c.id)}
+                    onShare={() => handleShare(c.id)}
+                  />
               ))}
             </div>
           )}
@@ -216,6 +264,10 @@ export default function Sidebar({
                     setEditing={(v) => setEditingTitle(v ? c.id : null)}
                     menuOpen={menuFor === c.id}
                     setMenuOpen={(v) => setMenuFor(v ? c.id : null)}
+                    onExportMd={() => handleExportMd(c.id)}
+                    onExportJson={() => handleExportJson(c.id)}
+                    onExportPdf={() => handleExportPdf(c.id)}
+                    onShare={() => handleShare(c.id)}
                   />
                 ))}
             </div>
@@ -253,19 +305,75 @@ export default function Sidebar({
           ) : (
             <div className="flex items-center justify-between text-xs text-[var(--asky-fg-muted)]">
               <span>Auto-delete 3d</span>
-              <button
-                className="rounded-md p-1.5 hover:bg-white/10 hover:text-[var(--asky-fg)]"
-                title="Clear chat history"
-                onClick={() => setShowClearDialog(true)}
-              >
-                <Trash2 size={14} />
-              </button>
+              <div className="flex gap-1">
+                <button
+                  className="rounded-md p-1.5 hover:bg-white/10 hover:text-[var(--asky-fg)]"
+                  title="Import chat"
+                  onClick={() => { setImportText(""); setShowImport((v) => !v); }}
+                >
+                  <FilePlus size={14} />
+                </button>
+                <button
+                  className="rounded-md p-1.5 hover:bg-white/10 hover:text-[var(--asky-fg)]"
+                  title="Clear chat history"
+                  onClick={() => setShowClearDialog(true)}
+                >
+                  <Trash2 size={14} />
+                </button>
+              </div>
+            </div>
+          )}
+          {showImport && (
+            <div className="mt-2 rounded-lg border border-[var(--asky-border)] bg-[#2a2a2a] p-3 text-sm">
+              <p className="mb-2 text-xs text-[var(--asky-fg-muted)]">
+                Paste a shared Asky link or chat JSON, then open it as a new chat.
+              </p>
+              <textarea
+                value={importText}
+                onChange={(e) => setImportText(e.target.value)}
+                placeholder="https://...?share=... or { ... }"
+                rows={3}
+                className="w-full rounded-md bg-[#202020] p-2 text-xs outline-none focus:ring-1 focus:ring-[var(--asky-accent)]"
+              />
+              <div className="mt-2 flex gap-2">
+                <button
+                  className="flex-1 rounded-full bg-white px-3 py-1.5 font-medium text-black hover:bg-gray-200"
+                  onClick={() => {
+                    importAsChat(importText.trim(), importChat);
+                    setShowImport(false);
+                  }}
+                >
+                  Import
+                </button>
+                <button
+                  className="flex-1 rounded-full px-3 py-1.5 hover:bg-white/10"
+                  onClick={() => setShowImport(false)}
+                >
+                  Cancel
+                </button>
+              </div>
             </div>
           )}
         </div>
       </aside>
     </>
   );
+}
+
+function importAsChat(raw: string, importChat: ReturnType<typeof useApp>["importChat"]) {
+  if (!raw) return;
+  let input = raw;
+  const m = raw.match(/[?&]share=([^&]+)/);
+  if (m) input = m[1];
+  const hash = raw.match(/#\/?(share\?c=|share=)([^&]+)/);
+  if (!m && hash) input = hash[2];
+  try {
+    const json = decodeShareString(input);
+    const parsed = parseSharedMessages(json);
+    importChat(parsed.messages, parsed.title, parsed.modelKey);
+  } catch {
+    alert("Couldn't import: not a valid Asky chat link or JSON.");
+  }
 }
 
 function ChatRow({
@@ -280,6 +388,10 @@ function ChatRow({
   setEditing,
   menuOpen,
   setMenuOpen,
+  onExportMd,
+  onExportJson,
+  onExportPdf,
+  onShare,
 }: {
   chat: ReturnType<typeof useApp>["chats"][number];
   active: boolean;
@@ -292,6 +404,10 @@ function ChatRow({
   setEditing: (v: boolean) => void;
   menuOpen: boolean;
   setMenuOpen: (v: boolean) => void;
+  onExportMd: () => void;
+  onExportJson: () => void;
+  onExportPdf: () => void;
+  onShare: () => void;
 }) {
   const { folders } = useApp();
   const [titleDraft, setTitleDraft] = useState(chat.title);
@@ -364,6 +480,18 @@ function ChatRow({
             </div>
           )}
           <div className="border-t border-[var(--asky-border)]">
+            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onExportMd(); }}>
+              <Download size={13} /> Export .md
+            </button>
+            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onExportJson(); }}>
+              <FilePlus size={13} /> Export .json
+            </button>
+            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onShare(); }}>
+              <LinkIcon size={13} /> Copy share link
+            </button>
+            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onExportPdf(); }}>
+              <Download size={13} /> Export .pdf
+            </button>
             <button className="flex w-full items-center gap-2 px-3 py-1.5 text-red-400 hover:bg-white/5" onClick={() => { setMenuOpen(false); onDelete(); }}>
               <Trash2 size={13} /> Delete
             </button>

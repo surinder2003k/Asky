@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
@@ -19,15 +19,75 @@ import { MODELS, PROVIDERS, DEFAULT_MODEL_KEY, type ModelDef } from "../provider
 import { streamChat } from "../ai";
 import type { ChatMessage } from "../storage";
 import { genId } from "../storage";
+import { followUpSuggestions, homeSuggestions } from "../suggestions";
+import { exportMessageToPdf } from "../pdf";
 
 marked.setOptions({ breaks: true });
 
-function renderMd(text: string) {
-  const raw = marked.parse(text || "") as string;
+/**
+ * Mount code previews for fenced html blocks emitted by renderMd.
+ * Looks for <div class="code-html-block" data-html-src="..."> placeholders
+ * inside `root` (default: whole document) and renders sandboxed iframes.
+ */
+export function mountCodePreviews(root: Document = document) {
+  const blocks = root.querySelectorAll<HTMLDivElement>(".code-html-block");
+  blocks.forEach((block) => {
+    if (block.dataset.mounted) return;
+    block.dataset.mounted = "1";
+    let src = block.dataset.htmlSrc ?? "";
+    try {
+      src = decodeURIComponent(src);
+    } catch {
+      /* leave as-is */
+    }
+    if (!src) return;
+
+    const wrap = document.createElement("div");
+    wrap.className = "code-preview-wrap";
+    wrap.innerHTML = `
+      <div class="code-preview-bar">
+        <span>Live HTML preview</span>
+        <button class="code-preview-run">Run</button>
+        <button class="code-preview-close">Close</button>
+      </div>
+      <div class="code-preview-frame-box"></div>`;
+    const box = wrap.querySelector(".code-preview-frame-box") as HTMLDivElement;
+    const runBtn = wrap.querySelector(".code-preview-run") as HTMLButtonElement;
+    const closeBtn = wrap.querySelector(".code-preview-close") as HTMLButtonElement;
+    const close = () => {
+      box.innerHTML = "";
+      closeBtn.textContent = "Closed";
+      closeBtn.disabled = true;
+      runBtn.textContent = "Run";
+    };
+    closeBtn.addEventListener("click", close);
+    runBtn.addEventListener("click", () => {
+      box.innerHTML = '<iframe sandbox="allow-scripts allow-forms allow-same-origin" class="code-preview-frame"></iframe>';
+      const iframe = box.querySelector("iframe") as HTMLIFrameElement;
+      iframe.srcdoc = src;
+      runBtn.textContent = "Re-run";
+      closeBtn.textContent = "Close";
+      closeBtn.disabled = false;
+    });
+    block.replaceChildren(wrap);
+  });
+}
+
+/** Render markdown, emitting fenced html blocks as preview placeholders. */
+export function renderMd(text: string) {
+  const renderer = new marked.Renderer();
+  renderer.code = ({ text, lang }) => {
+    if (lang === "html" || lang === "html5" || lang === "htm") {
+      const src = encodeURIComponent(text);
+      return `<div class="code-html-block" data-html-src="${src}">[html preview]</div>`;
+    }
+    return `<pre><code class="language-${String(lang ?? "")}">${text}</code></pre>`;
+  };
+  const raw = marked.parse(text || "", { renderer, breaks: true }) as string;
   return DOMPurify.sanitize(raw);
 }
 
-const SUGGESTIONS = [
+const STATIC_SUGGESTIONS = [
   { icon: "📝", text: "Help me write a professional resume from my details" },
   { icon: "🌐", text: "What are the latest AI trends this year?" },
   { icon: "📅", text: "Plan a productive morning routine for me" },
@@ -57,7 +117,13 @@ export default function ChatScreen({
   const [isStreaming, setIsStreaming] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [showPicker, setShowPicker] = useState(false);
+  const suggestions = homeSuggestions(chats || []);
   const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Mount sandboxed code previews for html fenced blocks after messages render.
+  useLayoutEffect(() => {
+    requestAnimationFrame(() => mountCodePreviews());
+  }, [activeChatId, chats.find((c) => c.id === activeChatId)?.messages.length]);
   const abortRef = useRef<AbortController | null>(null);
   const scrollAtBottom = useRef(true);
 
@@ -201,7 +267,7 @@ export default function ChatScreen({
   if (!chat) {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex h-full flex-col items-center justify-center gap-6 p-6">
+        <div className="flex h-full flex-col items-center justify-center gap-6 overflow-y-auto p-6">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--asky-accent-soft)]">
             <Sparkles size={26} className="text-[var(--asky-accent)]" />
           </div>
@@ -213,7 +279,7 @@ export default function ChatScreen({
           Chats are saved on this device and auto-delete 3 days after the last message (pinned chats are kept).
         </p>
         <div className="grid w-full max-w-2xl gap-2">
-          {SUGGESTIONS.map((s) => (
+          {suggestions.map((s) => (
             <button
               key={s.text}
               onClick={() => newChat()}
@@ -309,7 +375,7 @@ export default function ChatScreen({
 
       {/* messages */}
       <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
-        <div className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6">
+        <div key={`msgs-${chat?.id}`} className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6">
           {!hasContent && (
             <div className="flex flex-col items-center gap-3 pt-24">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--asky-accent-soft)]">
@@ -333,6 +399,20 @@ export default function ChatScreen({
               }}
               copied={copiedId === m.id}
               model={model}
+              onSuggest={
+                m.role === "assistant" && m.done && !isStreaming
+                  ? (text) => {
+                      setInput(text);
+                      // send immediately on next frame so input state flushes
+                      requestAnimationFrame(() => send(text, null));
+                    }
+                  : undefined
+              }
+              onExportPdf={
+                m.role === "assistant" && m.done && m.content
+                  ? (msg) => exportMessageToPdf(chat, msg)
+                  : undefined
+              }
               onEdit={
                 m.role === "user" && !isStreaming
                   ? (txt) => send(txt, m.image, m.id)
@@ -512,6 +592,8 @@ function MessageRow({
   copied,
   model,
   onEdit,
+  onSuggest,
+  onExportPdf,
 }: {
   msg: ChatMessage;
   isStreaming: boolean;
@@ -519,6 +601,8 @@ function MessageRow({
   copied: boolean;
   model: ModelDef;
   onEdit?: (text: string) => void;
+  onSuggest?: (text: string) => void;
+  onExportPdf?: (msg: ChatMessage) => void;
 }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(msg.content);
@@ -623,7 +707,7 @@ function MessageRow({
           {msg.image && <img src={msg.image} alt="seen" className="mt-2 max-h-48 rounded-lg" />}
         </div>
         {!isStreaming && msg.done && msg.content && (
-          <div className="mt-1 flex gap-2">
+          <div className="mt-1 flex flex-wrap gap-2">
             <button
               onClick={() => onCopy(msg.content)}
               className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[var(--asky-fg-muted)] hover:bg-white/5 hover:text-[var(--asky-fg)]"
@@ -631,6 +715,27 @@ function MessageRow({
               {copied ? <Check size={11} /> : <Copy size={11} />}
               {copied ? "Copied" : "Copy"}
             </button>
+            <button
+              onClick={() => onExportPdf?.(msg)}
+              className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[var(--asky-fg-muted)] hover:bg-white/5 hover:text-[var(--asky-fg)]"
+              title="Save reply as PDF"
+            >
+              🖨️ PDF
+            </button>
+
+          </div>
+        )}
+        {!isStreaming && msg.done && msg.content && onSuggest && (
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            {followUpSuggestions(msg.content).map((s) => (
+              <button
+                key={s}
+                onClick={() => onSuggest(s)}
+                className="rounded-full border border-[var(--asky-accent)]/30 bg-[var(--asky-accent-soft)] px-2.5 py-1 text-[11px] text-[var(--asky-accent)] hover:bg-[var(--asky-accent)] hover:text-white"
+              >
+                {s}
+              </button>
+            ))}
           </div>
         )}
       </div>

@@ -1,0 +1,54 @@
+
+/* Code preview panel for fenced html blocks */
+.msg-body pre {
+  overflow-x: auto;
+}
+.code-preview-wrap {
+  margin: 0.75rem 0;
+  border: 1px solid var(--asky-border);
+  border-radius: 0.75rem;
+  overflow: hidden;
+  background: #0d0d0d;
+}
+.code-preview-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  border-bottom: 1px solid var(--asky-border);
+  padding: 0.4rem 0.6rem;
+  font-size: 0.75rem;
+  color: var(--asky-fg-muted);
+}
+.code-preview-bar button {
+  margin-left: auto;
+  border-radius: 9999px;
+  padding: 0.2rem 0.7rem;
+  font-size: 0.7rem;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--asky-fg);
+  transition: background 0.15s;
+}
+.code-preview-bar button:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.code-preview-bar button.code-preview-run {
+  background: var(--asky-accent);
+  color: white;
+}
+.code-preview-bar button.code-preview-run:hover {
+  filter: brightness(1.15);
+}
+.code-preview-bar button:disabled {
+  opacity: 0.4;
+}
+.code-preview-frame-box {
+  background: white;
+}
+.code-preview-frame {
+  width: 100%;
+  height: 320px;
+  max-height: 55dvh;
+  border: none;
+  display: block;
+}

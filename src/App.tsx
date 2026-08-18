@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { PanelLeft } from "lucide-react";
+import { decodeShareString, parseSharedMessages } from "./export";
 import { AppProvider, useApp } from "./store";
 import Sidebar from "./components/Sidebar";
 import ChatScreen from "./components/ChatScreen";
@@ -8,10 +9,32 @@ import PinScreen from "./components/PinScreen";
 import OfflineNotice, { useIsOffline } from "./components/OfflineNotice";
 
 function Shell() {
-  const { settings, createChat, activeChatId } = useApp();
+  const { settings, importChat, isLoaded } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [unlocked, setUnlocked] = useState(!settings.pinEnabled);
+  const shareHandled = useRef(false);
+
+  // Hydrate a shared chat from ?share= (or #share=) URL parameter on first load.
+  useEffect(() => {
+    if (!isLoaded) return;
+    const params = new URLSearchParams(window.location.search);
+    const hashShare = window.location.hash.replace(/^#\/?(share\?c=|share=)/, "");
+    const raw = params.get("share") || hashShare;
+    if (!raw || shareHandled.current) return;
+    shareHandled.current = true;
+    try {
+      const json = decodeShareString(raw);
+      const parsed = parseSharedMessages(json);
+      if (parsed.messages.length > 0) {
+        importChat(parsed.messages, parsed.title, parsed.modelKey);
+      }
+    } catch {
+      /* invalid link — fall through to a normal new chat */
+    }
+    window.history.replaceState(null, "", window.location.pathname);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, importChat]);
 
   if (useIsOffline()) {
     return <OfflineNotice />;

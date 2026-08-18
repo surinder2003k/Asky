@@ -2,7 +2,7 @@
 
 A fast, minimal AI chat website inspired by ChatGPT and Grok. Clean dark UI, folders, chat search, image (vision) analysis, message edit, PIN lock, custom themes, and 3-day auto-delete of chats (pinned chats are kept). All data stays on the user's device (localStorage) — no accounts, no database.
 
-**Live website: [aichatapp-8ksusdph.manus.space](https://aichatapp-8ksusdph.manus.space)** — open-source and key-free: any user can paste their own provider keys and start chatting. No secrets are shipped in the code.
+**Live website: [asky.manus.space](https://asky.manus.space)** — open-source and key-free: any user can paste their own provider keys and start chatting. No secrets are shipped in the code.
 
 ## Features
 

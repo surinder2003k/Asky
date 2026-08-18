@@ -16,6 +16,7 @@ interface AppState {
   folders: Folder[];
   settings: Settings;
   activeChatId: string | null;
+  isLoaded: boolean;
 }
 
 interface Ctx extends AppState {
@@ -38,6 +39,7 @@ interface Ctx extends AppState {
   setPinEnabled: (on: boolean, pinHash?: number) => void;
   setCustomInstructions: (v: string) => void;
   clearConversations: () => void;
+  importChat: (messages: import("./storage").ChatMessage[], title?: string, modelKey?: string) => void;
 }
 
 const AppContext = createContext<Ctx | null>(null);
@@ -55,7 +57,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [folders, setFolders] = useState<Folder[]>([]);
   const [settings, setSettingsState] = useState<Settings>(() => loadSettings());
   const [activeChatId, setActiveChatIdState] = useState<string | null>(null);
+  const [isLoaded, setIsLoaded] = useState(false);
   const initDone = useRef(false);
+  const importedId = useRef<string | null>(null);
 
   useEffect(() => {
     if (initDone.current) return;
@@ -64,10 +68,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const f = loadFolders();
     setChats(c);
     setFolders(f);
-    const active = c.length ? c[0].id : null;
+    const active = importedId.current && c.some((x) => x.id === importedId.current)
+      ? importedId.current
+      : c.length
+        ? c[0].id
+        : null;
     setActiveChatIdState(active);
     document.documentElement.setAttribute("data-theme", loadSettings().theme);
     document.documentElement.setAttribute("data-accent", loadSettings().accent);
+    setIsLoaded(true);
   }, []);
 
   const updateSettings = useCallback((patch: Partial<Settings>) => {
@@ -90,7 +99,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const activeChat = useMemo(() => chats.find((c) => c.id === activeChatId) || null, [chats, activeChatId]);
 
-  const ctx = useMemo<Ctx>(() => {
+  const ctx = useMemo<Partial<Ctx>>(() => {
     const createChat = (modelKey?: string, folderId?: string | null): Chat => {
       const chat: Chat = {
         id: genId(),
@@ -172,10 +181,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
       clearConversations: () => {
         syncChats((prev) => prev.filter((c) => c.pinned));
       },
+      importChat: (messages, title, modelKey) => {
+        const chat: Chat = {
+          id: genId(),
+          title: title?.trim() || "Shared chat",
+          folderId: null,
+          pinned: false,
+          messages,
+          modelKey: modelKey || DEFAULT_MODEL_KEY,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        importedId.current = chat.id;
+        syncChats((prev) => [chat, ...prev]);
+        setActiveChatIdState(chat.id);
+      },
     };
   }, [chats, folders, settings, activeChatId, syncChats, updateSettings]);
 
-  return <AppContext.Provider value={ctx}>{children}</AppContext.Provider>;
+  const finalCtx: Ctx = { ...ctx, isLoaded } as Ctx;
+
+  return <AppContext.Provider value={finalCtx}>{children}</AppContext.Provider>;
 }
 
 export function useApp(): Ctx {
