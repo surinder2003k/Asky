@@ -15,9 +15,9 @@ import OfflineNotice, { useIsOffline } from "./components/OfflineNotice";
  */
 class ErrorBoundary extends Component<
   { children: ReactNode },
-  { error: Error | null }
+  { error: Error | null; confirmClear: boolean }
 > {
-  state = { error: null as Error | null };
+  state = { error: null as Error | null, confirmClear: false };
   static getDerivedStateFromError(error: Error) {
     return { error };
   }
@@ -25,6 +25,69 @@ class ErrorBoundary extends Component<
     // eslint-disable-next-line no-console
     console.error("[Asky] render crash:", error);
   }
+  private downloadChatsBackup = () => {
+    try {
+      const raw = localStorage.getItem(KEY_CHATS) || "[]";
+      const blob = new Blob([raw], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `asky-chats-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    } catch {
+      /* ignore */
+    }
+  };
+
+  private clearAll = () => {
+    [KEY_CHATS, KEY_FOLDERS, KEY_SETTINGS, "asky.status"].forEach((k) => {
+      try {
+        localStorage.removeItem(k);
+      } catch {
+        /* ignore */
+      }
+    });
+    window.location.reload();
+  };
+
+  private renderClearConfirm() {
+    return (
+      <div className="rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-input)] p-4 text-left">
+        <div className="text-sm font-medium text-[var(--asky-warning)]">⚠ This deletes EVERYTHING</div>
+        <p className="mt-1 text-xs text-[var(--asky-fg-muted)]">
+          All chats, folders, themes and API key settings on this device will be erased permanently.
+          This only helps if the stored data itself is corrupted.
+        </p>
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button
+            onClick={() => {
+              this.downloadChatsBackup();
+              this.clearAll();
+            }}
+            className="rounded-lg bg-[var(--asky-error)] px-3 py-1.5 text-xs font-medium text-white hover:opacity-90"
+          >
+            Download backup of chats, then erase & reload
+          </button>
+          <button
+            onClick={this.clearAll}
+            className="rounded-lg border border-[var(--asky-error)] px-3 py-1.5 text-xs text-[var(--asky-error)] hover:bg-[var(--asky-error)]/10"
+          >
+            Erase everything & reload (no backup)
+          </button>
+          <button
+            onClick={() => this.setState({ confirmClear: false })}
+            className="rounded-lg border border-[var(--asky-border)] px-3 py-1.5 text-xs text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)]"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   render() {
     if (this.state.error) {
       return (
@@ -43,22 +106,20 @@ class ErrorBoundary extends Component<
               Reload page
             </button>
             <button
-              onClick={() => {
-                const keys = [KEY_CHATS, KEY_FOLDERS, KEY_SETTINGS, "asky.status"];
-                keys.forEach((k) => {
-                  try {
-                    localStorage.removeItem(k);
-                  } catch {
-                    /* ignore */
-                  }
-                });
-                window.location.reload();
-              }}
+              onClick={() => this.downloadChatsBackup()}
+              className="rounded-lg border border-[var(--asky-border)] px-4 py-2 text-sm text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)]"
+              title="Save a JSON copy of your chats before doing anything else"
+            >
+              Download chat backup first
+            </button>
+            <button
+              onClick={() => this.setState({ confirmClear: !this.state.confirmClear })}
               className="rounded-lg border border-[var(--asky-border)] px-4 py-2 text-sm text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)]"
             >
               Clear corrupted data & reload
             </button>
           </div>
+          {this.state.confirmClear ? this.renderClearConfirm() : null}
           <details className="w-full max-w-md text-left">
             <summary className="cursor-pointer text-xs text-[var(--asky-fg-muted)]">Technical details</summary>
             <pre className="mt-2 max-h-40 overflow-auto rounded-lg border border-[var(--asky-border)] bg-[var(--asky-bg-input)] p-3 text-[11px] text-[var(--asky-fg-muted)]">

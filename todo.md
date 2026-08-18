@@ -188,3 +188,8 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] Direct PDF download: FileDown button in chat header → exportChatToPdf(chat)
 - [x] Hindi TTS voice: SettingsModal has ttsLang select (en/hi/automatic); speakMessage uses hi → hi-IN exact-region voice preference with graceful fallback; voiceLang setting for automatic mode
 - [x] Tests (104 pass) + typecheck clean + checkpoint + GitHub sync (sync-via-api.py) + deliver
+
+## Batch 66 (2026-08-18) — no-API-key crash fix
+- [x] Root cause FOUND + fixed: hook-order violation in ChatScreen — the system-prompt sync useEffect (was after the `if (!chat)` early return) broke the rules of hooks, producing "Rendered more hooks than during the previous render" → blank-screen crash on every first send with no chat open. Moved the effect to component level (before the first early return, alongside the other 15 hooks) — all 16 hooks now run in identical order on every render. typecheck clean.
+- [x] Missing-key message UX: send() now has a guard after targetChatId/assistantId creation — if no key exists for the chosen provider it shows a professional in-chat error bubble ("No API key is set for {provider}… try again once the key is added") instead of firing a doomed request; empty brand-new chats are removed cleanly. 5 new regression tests (109 pass).
+- [x] ErrorBoundary recovery hardened: "Clear corrupted data & reload" now opens a confirmation panel warning about total data loss (chats, folders, themes, key settings) with 3 actions — "Download chat backup first" (new button, saves asky-chats-backup-YYYY-MM-DD.json), "Erase everything & reload", and Cancel. One-tap accidental wipe no longer possible.

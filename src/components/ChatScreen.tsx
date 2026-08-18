@@ -87,6 +87,10 @@ export function renderMd(text: string) {
   return renderRichMd(text);
 }
 
+function noKeyMessage(provider: string): string {
+  return `No API key is set for ${provider}. Add your key in Settings → API Keys, or pick a model whose provider key is already set. Your message was not sent — try again once the key is added.`;
+}
+
 const STATIC_SUGGESTIONS = [
   { icon: FileText, text: "Help me write a professional resume from my details" },
   { icon: Globe, text: "What are the latest AI trends this year?" },
@@ -113,6 +117,7 @@ export default function ChatScreen({
     renameChat,
     toggleMessagePin,
     setActiveChatId,
+    deleteChat,
   } = useApp();
   const [input, setInput] = useState("");
   const [image, setImage] = useState<string | null>(null);
@@ -251,6 +256,8 @@ export default function ChatScreen({
     if (!chat || isStreaming) return;
     const idx = chat.messages.findIndex((x) => x.id === msgId);
     if (idx === -1) return;
+    // NOTE: hooks must be called unconditionally — keep the chat-system-prompt
+    // sync effect at component level (below), never after this early return.
     // drop this assistant reply and anything after it, keeping up to the last user message
     const before = [...chat.messages]
       .slice(0, idx)
@@ -269,6 +276,13 @@ export default function ChatScreen({
     if (scrollAtBottom.current) scrollToBottom("auto");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chat?.messages.length, chat?.id]);
+
+  // Sync the per-chat system prompt whenever the active chat changes.
+  // Kept at component level so it always runs in the same order as every
+  // other hook, even on renders where `chat` is null (first early return).
+  useEffect(() => {
+    setChatSystemPrompt(chat?.systemPrompt || "");
+  }, [chat?.id]);
 
   function scrollToBottom(behavior: ScrollBehavior = "smooth") {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior });
@@ -317,10 +331,9 @@ export default function ChatScreen({
         setHomeModelKey(visionKey);
       }
     }
-    const apiKey =
-      settings.apiKeys[model.provider] ||
-      // server exposes built-in env keys for each provider
-      "";
+    const apiKey = settings.apiKeys[model.provider] || "";
+    // NOTE: the actual guard lives further below, once targetChatId and
+    // assistantId exist. See "no-api-key guard".
     // Combine global custom instructions + per-chat system prompt into one
     // system message. Kept out of stored history so it stays editable and isn't
     // re-shown on every turn as a visible message.
@@ -402,6 +415,24 @@ export default function ChatScreen({
         title: chat.messages.length === 0 ? text.trim().slice(0, 40) : chat.title,
         updatedAt: Date.now(),
       });
+    }
+
+    // no-api-key guard: surface a clear in-chat error bubble (never crash,
+    // never hang) and keep the user message so it can be retried after the key is added.
+    if (!apiKey) {
+      if (!chat) {
+        // nothing worth keeping in a brand-new empty chat → remove it
+        deleteChat(targetChatId);
+        setActiveChatId(null);
+      } else {
+        updateMessage(targetChatId, assistantId, {
+          content: "",
+          error: noKeyMessage(model.provider),
+          done: true,
+        });
+        scrollToBottom();
+      }
+      return;
     }
 
     setIsStreaming(true);
@@ -725,9 +756,6 @@ export default function ChatScreen({
   const model = MODELS.find((m) => m.key === chat.modelKey) || MODELS[0];
   const keySet = Boolean(settings.apiKeys[model.provider]);
   const hasContent = chat.messages.length > 0;
-  useEffect(() => {
-    setChatSystemPrompt(chat?.systemPrompt || "");
-  }, [chat?.id]);
 
   return (
     <div className="flex h-full flex-col">
