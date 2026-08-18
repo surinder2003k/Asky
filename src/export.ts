@@ -147,3 +147,150 @@ export function buildShareUrl(chat: Chat): string {
   const base = window.location.origin + window.location.pathname;
   return `${base}?share=${encodeShareString(chat)}`;
 }
+
+/** Download the chat as a plain text file. */
+export function downloadTxt(chat: Chat) {
+  const lines: string[] = [];
+  lines.push(`${chat.title}`);
+  lines.push("");
+  lines.push(`Exported: ${new Date(chat.updatedAt).toLocaleString()}`);
+  lines.push("");
+  for (const m of chat.messages) {
+    if (m.role === "user") {
+      lines.push(`== You ==`);
+      lines.push("");
+      lines.push(m.content);
+      if (m.image) lines.push("[image attached]");
+      lines.push("");
+    } else {
+      lines.push(`== Asky ==`);
+      lines.push("");
+      if (m.reasoning?.trim()) {
+        lines.push(`[thought] ${m.reasoning}`);
+        lines.push("");
+      }
+      lines.push(m.content || (m.error ? `[error: ${m.error}]` : ""));
+      lines.push("");
+    }
+  }
+  const blob = new Blob([lines.join("\n")], { type: "text/plain;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${(chat.title || "chat").replace(/[^\w-]+/g, "_").slice(0, 60)}.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+/**
+ * Export the chat in WhatsApp-friendly plain text: *bold* labels, > quotes,
+ * timestamps, so pasting into WhatsApp keeps formatting.
+ */
+export function chatToWhatsAppText(chat: Chat): string {
+  const lines: string[] = [];
+  lines.push(`*${chat.title || "Chat"}*`);
+  lines.push(`_Exported: ${new Date(chat.updatedAt).toLocaleString()}_`);
+  lines.push("");
+  for (const m of chat.messages) {
+    const when = m.createdAt ? new Date(m.createdAt).toLocaleString() : "";
+    if (m.role === "user") {
+      const label = when ? `*You* (${when})` : `*You*`;
+      lines.push(label);
+      for (const line of (m.content || "").split("\n")) {
+        lines.push(`> ${line}`);
+      }
+      if (m.image) lines.push("> _[image attached]_");
+      lines.push("");
+    } else {
+      const label = when ? `*Asky* (${when})` : `*Asky*`;
+      lines.push(label);
+      if (m.reasoning?.trim()) {
+        for (const line of m.reasoning.split("\n")) {
+          lines.push(`> _[thought] ${line}_`);
+        }
+        lines.push("");
+      }
+      if (m.error) {
+        lines.push("> _[error] " + m.error + "_");
+      } else {
+        for (const line of (m.content || "").split("\n")) {
+          lines.push(`> ${line}`);
+        }
+      }
+      lines.push("");
+    }
+  }
+  return lines.join("\n").replace(/\n+\n+/g, "\n\n").trim() + "\n";
+}
+
+/** Copy the chat as WhatsApp-formatted text to clipboard and download as .txt. */
+export async function exportChatToWhatsApp(chat: Chat) {
+  const text = chatToWhatsAppText(chat);
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `${(chat.title || "chat").replace(/[^\w-]+/g, "_").slice(0, 60)}_whatsapp.txt`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  try {
+    await navigator.clipboard.writeText(text);
+    return { downloaded: true, copied: true };
+  } catch {
+    return { downloaded: true, copied: false };
+  }
+}
+
+/** Rough word + token estimate for a chat (tokens ≈ 1.33 × words). */
+export function chatWordCount(chat: Chat) {
+  let words = 0;
+  for (const m of chat.messages) {
+    if (m.content) words += m.content.split(/\s+/).filter(Boolean).length;
+  }
+  return { words, tokens: Math.ceil(words * 1.33) };
+}
+
+/** Download every chat as a zip containing one folder per chat (Markdown + JSON). */
+export async function exportAllChatsZip(chats: Chat[]) {
+  const JSZip = (await import("jszip")).default;
+  const zip = new JSZip();
+  const sanitize = (name: string) => (name || "chat").replace(/[\\/:*?"<>|]/g, "_").trim() || "chat";
+  for (const chat of chats) {
+    const name = sanitize(chat.title);
+    const folder = zip.folder(name);
+    if (!folder) continue;
+    const mdLines: string[] = [];
+    mdLines.push(`# ${chat.title}`);
+    mdLines.push("");
+    mdLines.push(`**Asky chat** · ${new Date(chat.updatedAt).toLocaleString()}`);
+    mdLines.push("");
+    for (const m of chat.messages) {
+      if (m.role === "user") {
+        mdLines.push(`## User`);
+        mdLines.push("");
+        mdLines.push(m.content);
+        if (m.image) mdLines.push("\n*[image attached]*");
+        mdLines.push("");
+      } else {
+        mdLines.push(`## Asky`);
+        mdLines.push("");
+        if (m.reasoning?.trim()) {
+          mdLines.push("> *Thought for a moment…*\n");
+          mdLines.push(m.reasoning);
+          mdLines.push("");
+        }
+        mdLines.push(m.content || (m.error ? `⚠ Error: ${m.error}` : ""));
+        mdLines.push("");
+      }
+    }
+    folder.file(`${name}.md`, mdLines.join("\n"));
+    folder.file(`${name}.json`, JSON.stringify(chat, null, 2));
+  }
+  const blob = await zip.generateAsync({ type: "blob" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `asky-all-chats-${new Date().toISOString().slice(0, 10)}.zip`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}

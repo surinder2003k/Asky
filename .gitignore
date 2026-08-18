@@ -65,3 +65,4 @@ Thumbs.db
 .webdev/
 .project-config.json
 lib/builtin-keys.ts
+session_notes.md

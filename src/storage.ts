@@ -9,7 +9,9 @@ export interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   reasoning?: string;
-  image?: string; // base64 data URL
+  image?: string; // base64 data URL (primary)
+  images?: string[]; // base64 data URLs (multi-image payload)
+  replyTo?: string; // quoted message id
   done?: boolean;
   error?: string;
   createdAt: number;
@@ -22,6 +24,8 @@ export interface Chat {
   pinned?: boolean;
   messages: ChatMessage[];
   modelKey: string;
+  systemPrompt?: string; // per-chat instructions, prepended at send time
+  pinnedMsgIds?: string[]; // pinned message ids
   createdAt: number;
   updatedAt: number;
 }
@@ -36,10 +40,40 @@ export interface Settings {
   apiKeys: Partial<Record<ProviderKey, string>>;
   theme: "dark" | "light";
   accent: "teal" | "blue" | "purple";
+  voiceLang?: "en" | "hi" | "hinglish";
   pinEnabled: boolean;
   pinHash?: number; // simple hash of 4-6 digit pin
   customInstructions?: string;
   languagePreset?: string;
+  // Batch 62
+  favoriteModelKeys?: string[]; // model keys starred in picker
+  nicknames?: Record<string, string>; // model key -> custom short name
+  customModels?: CustomModelDef[]; // user-added custom models
+  templates?: PromptTemplate[]; // reusable prompt templates
+  ttsEnabled?: boolean; // TTS speak button under assistant messages
+  ttsRate?: number; // TTS playback rate (0.5-2)
+  ttsLang?: string; // TTS language preference
+  ttsVoiceName?: string; // pinned TTS voice
+  chatWidth?: "compact" | "medium"; // chat container width
+  fontSize?: "small" | "medium" | "large"; // message font size
+  temperature?: number; // generation temperature
+  topP?: number; // generation top_p
+  voiceInputEnabled?: boolean; // mic in composer
+}
+
+export interface CustomModelDef {
+  id: string;
+  provider: string; // provider key, e.g. "openrouter"
+  modelId: string; // upstream model id
+  label: string; // display name
+  vision?: boolean; // supports image analysis
+  enabled?: boolean;
+}
+
+export interface PromptTemplate {
+  id: string;
+  name: string;
+  content: string;
 }
 
 function load<T>(key: string, fallback: T): T {
@@ -77,7 +111,20 @@ export function loadSettings(): Settings {
     apiKeys: {},
     theme: "dark",
     accent: "teal",
+    voiceLang: "en",
     pinEnabled: false,
+    favoriteModelKeys: [],
+    nicknames: {},
+    customModels: [],
+    templates: [],
+    ttsEnabled: false,
+    ttsRate: 1,
+    ttsLang: "en",
+    chatWidth: "medium",
+    fontSize: "medium",
+    temperature: 0.7,
+    topP: 1,
+    voiceInputEnabled: true,
   });
 }
 export function saveSettings(settings: Settings) {

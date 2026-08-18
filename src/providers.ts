@@ -1,5 +1,15 @@
+import type { CustomModelDef } from "./storage";
+
 // Verified working models (live-tested 2026-08-18).
 // Open-source site: NO built-in keys — every user brings their own API keys.
+
+export const PROVIDER_LABELS: Record<ProviderKey, string> = {
+  nvidia: "Nvidia",
+  mistral: "Mistral",
+  groq: "Groq",
+  openrouter: "OpenRouter",
+  opencode: "OpenCode Zen",
+};
 
 export type ProviderKey = "nvidia" | "mistral" | "groq" | "openrouter" | "opencode";
 
@@ -116,7 +126,44 @@ export function resolveModelId(model: ModelDef): string {
 }
 
 export function getModel(key: string): ModelDef | undefined {
-  return MODELS.find((m) => m.key === key);
+  return ALL_MODELS().find((m) => m.key === key);
+}
+
+/** Built-in + user-added custom models (custom models come from settings). */
+export function ALL_MODELS(): ModelDef[] {
+  try {
+    const raw = localStorage.getItem("asky.settings");
+    if (raw) {
+      const s = JSON.parse(raw);
+      const customs = (s?.customModels ?? []) as CustomModelDef[];
+      const valid = customs.filter((c) => c?.enabled !== false && c?.modelId);
+      if (valid.length) {
+        return [
+          ...MODELS,
+          ...valid.map((c) => ({
+            key: `custom/${c.id}`,
+            label: c.label || c.modelId,
+            provider: c.provider as ProviderKey,
+            vision: Boolean(c.vision),
+            keepPrefix: false,
+          })),
+        ];
+      }
+    }
+  } catch {
+    /* ignore malformed settings */
+  }
+  return MODELS;
+}
+
+/** Invalidate any memoized copy of the model catalog (custom model added/removed). */
+let catalogVersion = 0;
+export function invalidateCustomModels() {
+  catalogVersion += 1;
+  return catalogVersion;
+}
+export function getCatalogVersion() {
+  return catalogVersion;
 }
 
 export const DEFAULT_MODEL_KEY = "z-ai/glm-5.2";

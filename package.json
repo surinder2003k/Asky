@@ -14,13 +14,26 @@
   },
   "type": "module",
   "dependencies": {
+    "@trpc/server": "^11.18.0",
+    "@types/cookie": "^1.0.0",
+    "axios": "^1.19.0",
+    "cookie": "^2.0.1",
     "dompurify": "^3.4.13",
+    "dotenv": "^17.4.2",
+    "drizzle-orm": "^0.45.2",
     "express": "^4.22.1",
+    "jose": "^6.2.9",
+    "jszip": "^3.10.1",
+    "katex": "^0.18.4",
     "lucide-react": "^1.31.0",
     "marked": "^18.0.9",
+    "mermaid": "^11.16.1",
+    "mysql2": "^3.23.3",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
-    "react-router-dom": "^7.18.2"
+    "react-router-dom": "^7.18.2",
+    "superjson": "^2.2.6",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import {
   Plus,
   Search,
@@ -8,16 +8,24 @@ import {
   MoreVertical,
   Pin,
   MessageSquare,
+  Sun,
+  Moon,
   X,
   Download,
   Link as LinkIcon,
   FilePlus,
+  Image,
+  Info,
+  Archive,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import { useMemo } from "react";
 import { useApp } from "../store";
 import { clearConversations } from "../storage";
-import { decodeShareString, parseSharedMessages, downloadMarkdown, downloadJson, buildShareUrl } from "../export";
+import { decodeShareString, parseSharedMessages, downloadMarkdown, downloadJson, downloadTxt, chatWordCount, buildShareUrl, exportChatToWhatsApp, exportAllChatsZip } from "../export";
 import { exportChatToPdf } from "../pdf";
+import { downloadChatPng } from "../png";
 
 function timeAgo(ts: number) {
   const d = Math.floor((Date.now() - ts) / 60000);
@@ -50,8 +58,11 @@ export default function Sidebar({
     addFolder,
     renameFolder,
     deleteFolder,
+    moveFolder,
     clearConversations,
     importChat,
+    settings,
+    setTheme,
   } = useApp();
   const [showImport, setShowImport] = useState(false);
   const [importText, setImportText] = useState("");
@@ -87,10 +98,51 @@ export default function Sidebar({
     const chat = chatMap.get(chatId);
     if (chat) exportChatToPdf(chat);
   }
+
+  function handleExportPng(chatId: string) {
+    const chat = chatMap.get(chatId);
+    if (chat) downloadChatPng(chat);
+  }
+  function handleExportTxt(chatId: string) {
+    const chat = chatMap.get(chatId);
+    if (chat) downloadTxt(chat);
+  }
+  function handleExportWhatsApp(chatId: string) {
+    const chat = chatMap.get(chatId);
+    if (chat) exportChatToWhatsApp(chat);
+  }
+  function handleInfo(chatId: string) {
+    const chat = chatMap.get(chatId);
+    if (!chat) return;
+    const { words, tokens } = chatWordCount(chat);
+    prompt(
+      `Chat info — ${chat.title}\n\nMessages: ${chat.messages.length}\nWords: ${words.toLocaleString()}\nApprox tokens: ${tokens.toLocaleString()}`,
+      "",
+    );
+  }
   const [editingFolder, setEditingFolder] = useState<string | null>(null);
   const [editingTitle, setEditingTitle] = useState<string | null>(null);
   const [showClearDialog, setShowClearDialog] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<string | null>(null);
+
+  const pendingDeleteChat = pendingDelete ? chats.find((c) => c.id === pendingDelete) : undefined;
+
+  function deleteChatDirect(chatId: string) {
+    deleteChat(chatId);
+  }
+
+  function confirmDeleteChat(chatId: string) {
+    setMenuFor(null);
+    setPendingDelete(chatId);
+  }
+
+  function runPendingDelete() {
+    if (!pendingDelete) return;
+    const id = pendingDelete;
+    setPendingDelete(null);
+    deleteChat(id);
+  }
 
   const q = search.trim().toLowerCase();
   const filtered = chats.filter(
@@ -123,6 +175,13 @@ export default function Sidebar({
             </button>
             <span className="text-lg font-semibold">Asky</span>
           </div>
+          <button
+            onClick={() => setTheme(settings.theme === "dark" ? "light" : "dark")}
+            className="rounded-md p-2 text-[var(--asky-fg-muted)] hover:bg-white/5 hover:text-[var(--asky-fg)]"
+            title={`Switch to ${settings.theme === "dark" ? "light" : "dark"} mode`}
+          >
+            {settings.theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+          </button>
           <button
             onClick={onOpenSettings}
             className="rounded-md p-2 text-[var(--asky-fg-muted)] hover:bg-white/5 hover:text-[var(--asky-fg)]"
@@ -175,8 +234,23 @@ export default function Sidebar({
                   <button
                     className="hidden rounded p-1 text-[var(--asky-fg-muted)] hover:bg-white/10 group-hover:block"
                     onClick={() => confirm(`Delete folder "${f.name}"? Chats move to Recent.`) && deleteFolder(f.id)}
+                    title="Delete folder"
                   >
                     <Trash2 size={12} />
+                  </button>
+                  <button
+                    className="hidden rounded p-1 text-[var(--asky-fg-muted)] hover:bg-white/10 group-hover:block"
+                    onClick={() => moveFolder(f.id, -1)}
+                    title="Move folder up"
+                  >
+                    <ChevronUp size={12} />
+                  </button>
+                  <button
+                    className="hidden rounded p-1 text-[var(--asky-fg-muted)] hover:bg-white/10 group-hover:block"
+                    onClick={() => moveFolder(f.id, 1)}
+                    title="Move folder down"
+                  >
+                    <ChevronDown size={12} />
                   </button>
                 </div>
                 {inFolder.map((c) => (
@@ -190,7 +264,7 @@ export default function Sidebar({
                       onClose();
                     }}
                     onRename={(t) => renameChat(c.id, t)}
-                    onDelete={() => deleteChat(c.id)}
+                    onDelete={() => confirmDeleteChat(c.id)}
                     onPin={() => togglePin(c.id)}
                     onMove={() => moveChat(c.id, null)}
                     editing={editingTitle === c.id}
@@ -200,6 +274,10 @@ export default function Sidebar({
                     onExportMd={() => handleExportMd(c.id)}
                     onExportJson={() => handleExportJson(c.id)}
                     onExportPdf={() => handleExportPdf(c.id)}
+                    onExportPng={() => handleExportPng(c.id)}
+                    onExportTxt={() => handleExportTxt(c.id)}
+                    onExportWhatsApp={() => handleExportWhatsApp(c.id)}
+                    onInfo={() => handleInfo(c.id)}
                     onShare={() => handleShare(c.id)}
                   />
                 ))}
@@ -223,7 +301,7 @@ export default function Sidebar({
                       onClose();
                     }}
                     onRename={(t) => renameChat(c.id, t)}
-                    onDelete={() => deleteChat(c.id)}
+                    onDelete={() => confirmDeleteChat(c.id)}
                     onPin={() => togglePin(c.id)}
                     onMove={(f) => moveChat(c.id, f)}
                     editing={editingTitle === c.id}
@@ -233,6 +311,10 @@ export default function Sidebar({
                     onExportMd={() => handleExportMd(c.id)}
                     onExportJson={() => handleExportJson(c.id)}
                     onExportPdf={() => handleExportPdf(c.id)}
+                    onExportPng={() => handleExportPng(c.id)}
+                    onExportTxt={() => handleExportTxt(c.id)}
+                    onExportWhatsApp={() => handleExportWhatsApp(c.id)}
+                    onInfo={() => handleInfo(c.id)}
                     onShare={() => handleShare(c.id)}
                   />
               ))}
@@ -257,7 +339,7 @@ export default function Sidebar({
                       onClose();
                     }}
                     onRename={(t) => renameChat(c.id, t)}
-                    onDelete={() => deleteChat(c.id)}
+                    onDelete={() => confirmDeleteChat(c.id)}
                     onPin={() => togglePin(c.id)}
                     onMove={(f) => moveChat(c.id, f)}
                     editing={editingTitle === c.id}
@@ -267,6 +349,10 @@ export default function Sidebar({
                     onExportMd={() => handleExportMd(c.id)}
                     onExportJson={() => handleExportJson(c.id)}
                     onExportPdf={() => handleExportPdf(c.id)}
+                    onExportPng={() => handleExportPng(c.id)}
+                    onExportTxt={() => handleExportTxt(c.id)}
+                    onExportWhatsApp={() => handleExportWhatsApp(c.id)}
+                    onInfo={() => handleInfo(c.id)}
                     onShare={() => handleShare(c.id)}
                   />
                 ))}
@@ -306,6 +392,23 @@ export default function Sidebar({
             <div className="flex items-center justify-between text-xs text-[var(--asky-fg-muted)]">
               <span>Auto-delete 3d</span>
               <div className="flex gap-1">
+                <button
+                  className="rounded-md p-1.5 hover:bg-white/10 hover:text-[var(--asky-fg)]"
+                  title="Save current chat as PNG image"
+                  onClick={() => {
+                    const cur = chats.find((c) => c.id === activeChatId);
+                    if (cur) downloadChatPng(cur);
+                  }}
+                >
+                  <Image size={14} />
+                </button>
+                <button
+                  className="rounded-md p-1.5 hover:bg-white/10 hover:text-[var(--asky-fg)]"
+                  title="Export all chats as zip"
+                  onClick={() => exportAllChatsZip(chats.filter((c) => !c.pinned).length > 0 ? chats : chats)}
+                >
+                  <Archive size={14} />
+                </button>
                 <button
                   className="rounded-md p-1.5 hover:bg-white/10 hover:text-[var(--asky-fg)]"
                   title="Import chat"
@@ -356,6 +459,14 @@ export default function Sidebar({
           )}
         </div>
       </aside>
+
+      {pendingDeleteChat && (
+        <DeleteConfirmDialog
+          title={pendingDeleteChat.title}
+          onCancel={() => setPendingDelete(null)}
+          onConfirm={runPendingDelete}
+        />
+      )}
     </>
   );
 }
@@ -391,6 +502,10 @@ function ChatRow({
   onExportMd,
   onExportJson,
   onExportPdf,
+  onExportPng,
+  onExportTxt,
+  onExportWhatsApp,
+  onInfo,
   onShare,
 }: {
   chat: ReturnType<typeof useApp>["chats"][number];
@@ -407,10 +522,58 @@ function ChatRow({
   onExportMd: () => void;
   onExportJson: () => void;
   onExportPdf: () => void;
+  onExportPng: () => void;
+  onExportTxt: () => void;
+  onExportWhatsApp: () => void;
+  onInfo: () => void;
   onShare: () => void;
 }) {
   const { folders } = useApp();
   const [titleDraft, setTitleDraft] = useState(chat.title);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const didLongPress = useRef(false);
+  const swipeState = useRef<{ startX: number; startY: number; active: boolean }>({ startX: 0, startY: 0, active: true });
+
+  function onTouchStartSwipe(e: React.TouchEvent) {
+    swipeState.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, active: true };
+  }
+
+  function onTouchEndSwipe(e: React.TouchEvent) {
+    if (!swipeState.current.active) return;
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const dx = endX - swipeState.current.startX;
+    const dy = endY - swipeState.current.startY;
+    // Require a mostly-horizontal swipe of at least 70px
+    if (Math.abs(dx) > 70 && Math.abs(dx) > Math.abs(dy) * 2) {
+      if (dx < 0) {
+        // swipe left -> delete (goes through confirm dialog)
+        onDelete();
+      } else {
+        // swipe right -> open
+        onOpen();
+      }
+      // swallow the pending click from long-press handling
+      didLongPress.current = true;
+      setTimeout(() => setMenuOpen(false), 0);
+    }
+    swipeState.current.active = false;
+  }
+
+  function startLongPress() {
+    didLongPress.current = false;
+    longPressTimer.current = setTimeout(() => {
+      didLongPress.current = true;
+      setMenuOpen(true);
+    }, 450);
+  }
+
+  function endLongPress() {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }
 
   return (
     <div className={`group relative mb-0.5 flex items-center rounded-lg ${active ? "bg-[#2f2f2f]" : "hover:bg-[#2a2a2a]"}`}>
@@ -419,6 +582,32 @@ function ChatRow({
         onDoubleClick={() => {
           setTitleDraft(chat.title);
           setEditing(true);
+        }}
+        onMouseDown={startLongPress}
+        onMouseUp={endLongPress}
+        onMouseLeave={endLongPress}
+        onTouchStart={(e) => {
+          startLongPress();
+          onTouchStartSwipe(e);
+        }}
+        onTouchEnd={(e) => {
+          endLongPress();
+          // prevent the pending click from firing after a long press
+          if (didLongPress.current) {
+            didLongPress.current = false;
+            setTimeout(() => setMenuOpen(false), 0);
+            return;
+          }
+          onTouchEndSwipe(e);
+        }}
+        onTouchMove={(e) => {
+          // a big vertical move (scroll) cancels swipe detection
+          const dy = Math.abs(e.touches[0].clientY - swipeState.current.startY);
+          if (dy > 30) swipeState.current.active = false;
+        }}
+        onContextMenu={(e) => {
+          e.preventDefault();
+          setMenuOpen(true);
         }}
         className="flex flex-1 flex-col items-start px-2.5 py-2 text-left"
       >
@@ -444,13 +633,36 @@ function ChatRow({
             <span className="flex items-center gap-1.5 truncate text-sm">
               <MessageSquare size={13} className="shrink-0 text-[var(--asky-fg-muted)]" />
               <span className="truncate">{chat.title}</span>
+                  {(() => {
+                    const last = [...chat.messages].reverse().find((x) => x.role === "assistant" && x.content && !x.error);
+                    if (!last) return null;
+                    return (
+                      <span className="mt-0.5 block truncate text-[11px] leading-tight text-[var(--asky-fg-muted)]" title={last.content}>
+                        {last.content.slice(0, 60).replace(/\n/g, " ")}
+                      </span>
+                    );
+                  })()}
               {chat.pinned && <Pin size={11} className="shrink-0 text-[var(--asky-accent)]" />}
             </span>
-            <span className="text-[11px] text-[var(--asky-fg-muted)]">
+            <span
+              className="text-[11px] text-[var(--asky-fg-muted)]"
+              title={new Date(chat.updatedAt).toLocaleString()}
+            >
               {chat.messages.length} msgs · {timeAgo(chat.updatedAt)}
             </span>
           </>
         )}
+      </button>
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          setMenuOpen(false);
+          onDelete();
+        }}
+        aria-label={`Delete ${chat.title}`}
+        className="mr-1 rounded p-1 text-[var(--asky-fg-muted)] opacity-100 hover:bg-red-500/15 hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100"
+      >
+        <Trash2 size={14} />
       </button>
       <button
         onClick={() => setMenuOpen(!menuOpen)}
@@ -492,12 +704,53 @@ function ChatRow({
             <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onExportPdf(); }}>
               <Download size={13} /> Export .pdf
             </button>
+            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onExportPng(); }}>
+              <Image size={13} /> Export .png
+            </button>
+            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onExportWhatsApp(); }}>
+              <LinkIcon size={13} /> Export for WhatsApp
+            </button>
             <button className="flex w-full items-center gap-2 px-3 py-1.5 text-red-400 hover:bg-white/5" onClick={() => { setMenuOpen(false); onDelete(); }}>
               <Trash2 size={13} /> Delete
             </button>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+function DeleteConfirmDialog({
+  title,
+  onCancel,
+  onConfirm,
+}: {
+  title: string;
+  onCancel: () => void;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-6">
+      <div className="w-full max-w-sm rounded-xl border border-[var(--asky-border)] bg-[#2a2a2a] p-5 shadow-xl">
+        <h3 className="text-[15px] font-semibold text-[var(--asky-fg)]">Delete chat</h3>
+        <p className="mt-2 text-sm text-[var(--asky-fg-muted)]">
+          Delete <span className="font-medium text-[var(--asky-fg)]">{title}</span>? This cannot be undone.
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button
+            onClick={onCancel}
+            className="rounded-lg px-3.5 py-2 text-sm text-[var(--asky-fg-muted)] hover:bg-white/10"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            className="rounded-lg bg-red-500 px-3.5 py-2 text-sm font-medium text-white hover:bg-red-600"
+          >
+            Delete
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

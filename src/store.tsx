@@ -22,7 +22,7 @@ interface AppState {
 interface Ctx extends AppState {
   activeChat: Chat | null;
   setActiveChatId: (id: string | null) => void;
-  newChat: () => Chat;
+  newChat: (modelKey?: string, folderId?: string | null) => Chat;
   createChat: (modelKey?: string, folderId?: string | null) => Chat;
   updateChat: (id: string, patch: Partial<Chat>) => void;
   updateMessage: (chatId: string, msgId: string, patch: Partial<import("./storage").ChatMessage> | ((m: import("./storage").ChatMessage) => Partial<import("./storage").ChatMessage>)) => void;
@@ -36,8 +36,16 @@ interface Ctx extends AppState {
   setApiKeys: (keys: Partial<Settings["apiKeys"]>) => void;
   setTheme: (theme: Settings["theme"]) => void;
   setAccent: (accent: Settings["accent"]) => void;
+  setVoiceLang: (voiceLang: NonNullable<Settings["voiceLang"]>) => void;
   setPinEnabled: (on: boolean, pinHash?: number) => void;
   setCustomInstructions: (v: string) => void;
+  toggleFavorite: (modelKey: string) => void;
+  renameModel: (modelKey: string, nickname: string) => void;
+  setCustomModels: (models: Settings["customModels"]) => void;
+  updateSettings: (patch: Partial<Settings>) => void;
+  setTemplates: (templates: Settings["templates"]) => void;
+  toggleMessagePin: (chatId: string, msgId: string) => void;
+  moveFolder: (id: string, delta: 1 | -1) => void;
   clearConversations: () => void;
   importChat: (messages: import("./storage").ChatMessage[], title?: string, modelKey?: string) => void;
 }
@@ -176,8 +184,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setApiKeys: (keys) => updateSettings({ apiKeys: { ...settings.apiKeys, ...keys } }),
       setTheme: (theme) => updateSettings({ theme }),
       setAccent: (accent) => updateSettings({ accent }),
+      setVoiceLang: (voiceLang) => updateSettings({ voiceLang }),
       setPinEnabled: (on, pinHash) => updateSettings({ pinEnabled: on, ...(on && pinHash ? { pinHash } : {}) }),
       setCustomInstructions: (v) => updateSettings({ customInstructions: v }),
+      toggleFavorite: (modelKey) =>
+        updateSettings({
+          favoriteModelKeys: (settings.favoriteModelKeys ?? []).includes(modelKey)
+            ? (settings.favoriteModelKeys ?? []).filter((k) => k !== modelKey)
+            : [...(settings.favoriteModelKeys ?? []), modelKey],
+        }),
+      renameModel: (modelKey, nickname) =>
+        updateSettings({ nicknames: { ...settings.nicknames, [modelKey]: nickname } }),
+      setCustomModels: (models) => updateSettings({ customModels: models ?? [] }),
+      setTemplates: (templates) => updateSettings({ templates: templates ?? [] }),
+      toggleMessagePin: (chatId, msgId) =>
+        syncChats((prev) =>
+          prev.map((c) => {
+            if (c.id !== chatId) return c;
+            const ids = c.pinnedMsgIds ?? [];
+            return {
+              ...c,
+              pinnedMsgIds: ids.includes(msgId) ? ids.filter((x) => x !== msgId) : [...ids, msgId],
+              updatedAt: Date.now(),
+            };
+          }),
+        ),
+      moveFolder: (id, delta) =>
+        setFolders((prev) => {
+          const idx = prev.findIndex((f) => f.id === id);
+          if (idx < 0) return prev;
+          const target = idx + delta;
+          if (target < 0 || target >= prev.length) return prev;
+          const next = [...prev];
+          [next[idx], next[target]] = [next[target], next[idx]];
+          saveFolders(next);
+          return next;
+        }),
       clearConversations: () => {
         syncChats((prev) => prev.filter((c) => c.pinned));
       },

@@ -49,7 +49,7 @@ export function handleChat(req: Request, res: Response): void | Promise<void> {
 
     if (providerKey === "gemini" && gemini) {
       const url = `${PROVIDER_BASES.gemini}/models/${gemini.modelId}:streamGenerateContent?key=${encodeURIComponent(apiKey ?? "")}&alt=sse`;
-      await streamRelay(res, url, "POST", { "Content-Type": "application/json" }, gemini.body, gemini);
+      await streamRelay(res, url, "POST", "gemini", { "Content-Type": "application/json" }, gemini.body, gemini);
       return;
     }
 
@@ -69,7 +69,7 @@ export function handleChat(req: Request, res: Response): void | Promise<void> {
     }
 
     console.log(`[aiProxy] chat provider=${providerKey} modelId=${modelId}`);
-    await streamRelay(res, url, "POST", headers, body, { ...body, model: modelId });
+    await streamRelay(res, url, "POST", providerKey, headers, body, { ...body, model: modelId });
   })();
 }
 
@@ -128,6 +128,7 @@ async function streamRelay(
   res: Response,
   url: string,
   method: string,
+  providerKey: string,
   headers: Record<string, string>,
   body: unknown,
   sentBody: unknown,
@@ -142,10 +143,34 @@ async function streamRelay(
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     clearTimeout(timer);
-    res.status(upstream.status);
-    res.setHeader("Content-Type", "text/event-stream");
     res.setHeader("Cache-Control", "no-cache");
     res.setHeader("X-Request-Body", JSON.stringify(sentBody).slice(0, 2000));
+
+    if (!upstream.ok) {
+      // Upstream rejected the request — decode its error and send a friendly
+      // JSON payload the client shows directly (no opaque stream content).
+      const sentModel = (sentBody as { model?: string })?.model ?? "";
+      let upstreamMsg = "";
+      try {
+        const t = await upstream.text();
+        try {
+          const j = JSON.parse(t);
+          upstreamMsg = j?.error?.message || j?.error || j?.message || t || "";
+        } catch {
+          upstreamMsg = t;
+        }
+      } catch {
+        // body unreadable
+      }
+      const friendly = makeFriendlyError(providerKey, upstream.status, upstreamMsg, sentModel);
+      res.status(upstream.status === 429 || upstream.status === 403 ? upstream.status : upstream.status);
+      res.setHeader("Content-Type", "application/json");
+      res.end(JSON.stringify({ error: { message: friendly } }));
+      return;
+    }
+
+    res.status(200);
+    res.setHeader("Content-Type", "text/event-stream");
 
     if (!upstream.body) {
       res.end();
@@ -196,4 +221,23 @@ function getProviderLabel(key: string): string {
     gemini: "Gemini",
   };
   return labels[key] ?? key;
+}
+
+function makeFriendlyError(providerKey: string, status: number, upstreamMsg: string, model: string): string {
+  const isRateLimited =
+    status === 429 ||
+    status === 403 ||
+    /rate.{0,12}limit|FreeUsageLimitError|usage limit|quota/i.test(upstreamMsg);
+  const label = getProviderLabel(providerKey);
+  const modelName = model ? ` “${model}”` : "";
+  if (isRateLimited) {
+    return `${label}${modelName}: this model hit its daily free limit. Switch to another model in the picker (others on the same key still work) and retry.`;
+  }
+  if (status === 401 || /invalid.{0,20}(key|token|api)/i.test(upstreamMsg)) {
+    return `${label}: the API key was rejected. Check the key in Settings and save again.`;
+  }
+  if (status === 504 || /timeout|timed out/i.test(upstreamMsg)) {
+    return `${label}: the request took too long. Retry or try a lighter model.`;
+  }
+  return `${label}: provider error (${status}). ${upstreamMsg}`.trim();
 }

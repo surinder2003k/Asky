@@ -1,11 +1,17 @@
 import { getModel, resolveModelId, type ModelDef } from "./providers";
 import type { ChatMessage } from "./storage";
+import { isRateLimitError, recordModelStatus } from "./modelStatus";
 
 export interface StreamCallbacks {
   onDelta: (text: string) => void;
   onReasoning?: (text: string) => void;
   onDone: () => void;
   onError: (message: string) => void;
+}
+
+export interface GenParams {
+  temperature?: number;
+  top_p?: number;
 }
 
 function decodeError(err: unknown): string {
@@ -48,6 +54,7 @@ export function streamChat(
   messages: ChatMessage[],
   abort: AbortController,
   cb: StreamCallbacks,
+  opts: { params?: GenParams } = {},
 ) {
   const model = getModel(modelKey);
   if (!model) {
@@ -62,13 +69,24 @@ export function streamChat(
     body: {
       model: resolveModelId(model),
       messages: cleanHistory(messages).map((m) => {
-        if (m.image && m.role === "user") {
-          return { role: "user", content: [{ type: "text", text: m.content || "Describe this image" }, { type: "image_url", image_url: { url: m.image } }] };
+        if (m.role === "user") {
+          const allImages = [m.image, ...(m.images ?? [])].filter(Boolean);
+          if (allImages.length) {
+            return {
+              role: "user",
+              content: [
+                { type: "text", text: m.content || (allImages.length > 1 ? "Describe these images" : "Describe this image") },
+                ...allImages.map((img) => ({ type: "image_url", image_url: { url: img } })),
+              ],
+            };
+          }
         }
         return { role: m.role, content: m.content };
       }),
       stream: true,
       max_tokens: 2048,
+      ...(opts.params?.temperature != null ? { temperature: opts.params.temperature } : {}),
+      ...(opts.params?.top_p != null ? { top_p: opts.params.top_p } : {}),
     },
   };
   void modelKey;
@@ -88,8 +106,11 @@ export function streamChat(
         } catch {
           detail = res.statusText;
         }
-        throw new Error(detail || `Provider returned ${res.status}`);
+        const msg = detail || `Provider returned ${res.status}`;
+        if (isRateLimitError(msg)) recordModelStatus(modelKey, "rate-limited");
+        throw new Error(msg);
       }
+      recordModelStatus(modelKey, "ok");
       if (!res.body) throw new Error("No response stream");
       const reader = res.body.getReader();
       const decoder = new TextDecoder();
@@ -121,6 +142,7 @@ export function streamChat(
             const data = t.slice(5).trim();
             if (data === "[DONE]") {
               clearTimeout(timer);
+              recordModelStatus(modelKey, "ok");
               cb.onDone();
               return;
             }
@@ -142,6 +164,7 @@ export function streamChat(
         if (!started) {
           throw new Error("The model sent no content. This often means a rate limit — wait a moment and retry.");
         }
+        recordModelStatus(modelKey, "ok");
         cb.onDone();
       } catch (err) {
         clearTimeout(timer);
@@ -159,6 +182,9 @@ export function streamChat(
         // finalize gracefully instead of a hidden error.
         cb.onDone();
         return;
+      }
+      if (err instanceof Error && isRateLimitError(err.message)) {
+        recordModelStatus(modelKey, "rate-limited");
       }
       cb.onError(decodeError(err));
     });

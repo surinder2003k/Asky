@@ -65,3 +65,83 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] Typecheck clean; 32 vitest pass (7 files)
 - [ ] Sync asky-site changes to GitHub website branch
 - [ ] Final checkpoint + live link to user
+
+## Batch 51 — all remaining improvements in one pass
+- [x] Voice input mic button in composer (Web Speech API, works with vision models too, auto-send off)
+- [x] Dark/light theme toggle in sidebar/settings + custom accent colors (teal/blue/purple) persisted
+- [x] Copy message/chat as PNG (html2canvas-free approach via SVG foreignObject or canvas)
+- [x] Typecheck + tests pass
+- [x] Push to GitHub website branch, checkpoint, deliver
+
+## Batch 52 — final three improvements, done silently
+- [ ] Voice input language switch (Hindi / English / Hinglish) in settings or mic long-press
+- [x] Auto chat title generation via AI after first assistant reply
+- [ ] Keyboard shortcuts (Ctrl+K new chat, Ctrl+/ focus input, Esc close)
+- [x] Tests + typecheck + push to GitHub website branch
+- [x] Checkpoint + production deploy + deliver live link
+
+## Batch 54 — deep scan after rate-limit scare (2026-08-18)
+- [x] Re-test provider streaming via prod proxy (Nvidia GLM 5.2 verified end-to-end)
+- [x] Verify home: suggestions, composer, mic (screenshot OK)
+- [x] Verify chat/streaming via local prod server E2E script
+- [x] Dependency restoration: katex, mermaid, zod, @trpc/server, drizzle-orm, mysql2, axios, dotenv, jose, superjson, cookie
+- [x] Rebuilt drizzle/schema.ts (git tree lost it); restored lib/builtin-keys.ts (user-only keys, no built-ins)
+- [x] Unified "opencode" naming (lib/ai.ts + tests; catalog key opencode/...)
+- [x] Removed stale OTA remote-config tests (CDN 403); new static catalog test
+- [x] Rewrote opencode-reasoning test against real src/ai.ts SSE parser (92 tests pass, tsc clean)
+- [x] Push to GitHub website branch + checkpoint + deliver
+
+## Batch 55 (2026-08-18)
+- [x] Model picker on home screen: ModelChip added above suggestions (mobile + desktop); home sends/suggestions use selected homeModelKey; store newChat widened to accept modelKey
+- [x] In-chat header ModelChip unchanged (verified mobile screenshot)
+- [x] Typecheck clean + 92 tests pass after changes
+
+## Batch 56 (2026-08-18)
+- [ ] Opencode Zen 429: verify with user key via prod proxy; improve rate-limit error UX (friendly message, Retry works)
+- [ ] E2E verify other providers still stream (Nvidia/Groq via prod)
+- [ ] Checkpoint + deliver
+
+## Batch 56 (2026-08-18)
+- [x] OpenCode rate-limit UX: friendly error messages for 429/403 FreeUsageLimit (server/index.ts makeFriendlyError)
+- [x] Bare auth header fix for opencode/mistral/groq (Bearer was causing auth failures)
+- [x] NVIDIA_API_KEY re-verified (account daily quota = 429, not a key bug)
+- [x] tests/nvidia-stream.test.ts added (skips on provider 429, 93 tests pass, tsc clean)
+- [x] Push GitHub website branch (sanitized history; remote clone scan: zero secrets)
+- [x] Checkpoint + deliver
+
+## Batch 57 (2026-08-18)
+- [x] Sidebar chat history item: visible delete (trash) icon on each chat row (always on mobile, hover on desktop), tap opens confirm dialog then deletes
+- [x] Folders in sidebar already had delete icons (kept consistent)
+- [x] Typecheck clean + 93 tests pass, checkpoint, deliver
+
+## Batch 58 (2026-08-18)
+- [x] Investigated: OpenCode Zen sends NO rate-limit headers and has no usage API; free limits are per-model, traffic-based (confirmed via docs/curl). Nvidia/Mistral/Groq also don't expose free-tier usage.
+- [x] Model status tracker (src/modelStatus.ts, localStorage): per-model ok / rate-limited / unknown with timestamps; auto-recovers to unknown after 60 min
+- [x] Record status on chat send errors (429/403 FreeUsageLimit -> rate-limited; success -> ok) in ai.ts
+- [x] Model picker: status dot per model; warning label + "Limit hit — try:" fallback suggestion when current model is limited; home + chat pickers share ModelChip (both updated)
+- [x] Auto-switch: image attached + text-only model -> send switches to a working vision-capable model (prefers key-set, non-rate-limited) with a notice banner; persists on chat
+- [x] Mic voice input on in-chat composer (home composer already had it); uses voice.ts Web Speech API
+- [x] Settings API key fields: "Get API Key" button per provider linking to the provider's API keys page; opens in new tab
+- [x] Typecheck clean + 99 tests pass, checkpoint, deliver
+
+## Batch 59 (2026-08-18)
+- [x] Long-press on sidebar chat row: quick menu with rename / delete (long-press on touch, right-click/context on desktop)
+- [x] Theme toggle button in top bar: one-tap sun/moon dark/light switch (persisted)
+- [x] Share chat link: ?share= hydration verified; share action available in chat row menu
+- [x] Typecheck clean + 99 tests pass, checkpoint, deliver
+- [x] Chat message image: tap opens fullscreen image viewer (zoom in/out + reset + close)
+- [x] Composer attached image preview: tap opens same fullscreen viewer
+
+## Batch 60 (2026-08-18)
+- [x] WhatsApp-format chat export: chatToWhatsAppText (bold labels, > quotes, timestamps, image/error markers) + exportChatToWhatsApp (download _whatsapp.txt + clipboard copy); "Export for WhatsApp" in chat row menu
+- [x] Swipe gestures on sidebar chat rows: swipe-left = delete (via confirm dialog), swipe-right = open chat (70px horizontal threshold, vertical move cancels)
+- [x] Keyboard shortcuts panel in Settings listing all shortcuts + ArrowUp edit-last-message keybinding in both composers (Ctrl+K new chat, Ctrl+/ focus box, Esc, ArrowUp)
+- [x] Typecheck clean + 103 tests pass (incl 4 new whatsapp export tests), checkpoint, deliver
+
+## Batch 61 (2026-08-18)
+- [x] Offline: non-blocking slim banner at top (title="No internet — saved chats still readable"); app stays usable for reading saved chats; reload chip to retry
+- [x] Language-aware auto titles: titlegen prompt now asks for the title in the same language as the user's messages
+- [x] Pin/Unpin toggle confirmed in chat row context menu (long-press/right-click)
+- [x] Chat row timestamp: hover on "N msgs · Xm ago" shows full date+time via title attr
+- [x] Composer hint: in-chat placeholder shows "Message Asky (↑ edit last)" when input empty and chat has an editable last user message
+- [x] Typecheck clean + 103 tests pass (104 incl. skipped), checkpoint, deliver

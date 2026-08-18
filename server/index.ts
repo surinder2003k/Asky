@@ -53,7 +53,7 @@ app.post("/api/chat", async (req, res) => {
   const targetUrl = `${provider.url}/chat/completions`;
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
-    [provider.header]: `Bearer ${key}`,
+    [provider.header]: provider.bare ? key : `Bearer ${key}`,
   };
   if (providerKey === "openrouter") {
     headers["HTTP-Referer"] = "https://asky.manus.space";
@@ -79,7 +79,7 @@ app.post("/api/chat", async (req, res) => {
         detail = text.slice(0, 300);
       }
       return res.status(upstream.status).json({
-        error: { message: detail || `Upstream ${upstream.status}` },
+        error: { message: makeFriendlyError(providerKey, upstream.status, detail, modelId) },
       });
     }
 
@@ -133,3 +133,34 @@ if (isProd) {
 app.listen(PORT, () => {
   console.log(`[asky-server] listening on ${PORT} (${isProd ? "prod" : "dev"})`);
 });
+
+function makeFriendlyError(providerKey: string, status: number, upstreamMsg: string, model: string): string {
+  const isRateLimited =
+    status === 429 ||
+    status === 403 ||
+    /rate.{0,12}limit|FreeUsageLimitError|usage limit|quota/i.test(upstreamMsg);
+  const label = getProviderLabel(providerKey);
+  const modelName = model ? ` "${model}"` : "";
+  if (isRateLimited) {
+    return `${label}${modelName}: this model hit its daily free limit. Switch to another model in the picker (others on the same key still work) and retry.`;
+  }
+  if (status === 401 || /invalid.{0,20}(key|token|api)/i.test(upstreamMsg)) {
+    return `${label}: the API key was rejected. Check the key in Settings and save again.`;
+  }
+  if (status === 504 || /timeout|timed out/i.test(upstreamMsg)) {
+    return `${label}: the request took too long. Retry or try a lighter model.`;
+  }
+  return `${label}: provider error (${status}). ${upstreamMsg}`.trim();
+}
+
+function getProviderLabel(key: string): string {
+  const labels: Record<string, string> = {
+    nvidia: "Nvidia",
+    mistral: "Mistral",
+    groq: "Groq",
+    openrouter: "OpenRouter",
+    opencode: "OpenCode Zen",
+    gemini: "Gemini",
+  };
+  return labels[key] ?? key;
+}

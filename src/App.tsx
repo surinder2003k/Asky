@@ -9,7 +9,7 @@ import PinScreen from "./components/PinScreen";
 import OfflineNotice, { useIsOffline } from "./components/OfflineNotice";
 
 function Shell() {
-  const { settings, importChat, isLoaded } = useApp();
+  const { settings, importChat, newChat, isLoaded } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [unlocked, setUnlocked] = useState(!settings.pinEnabled);
@@ -17,7 +17,6 @@ function Shell() {
 
   // Hydrate a shared chat from ?share= (or #share=) URL parameter on first load.
   useEffect(() => {
-    if (!isLoaded) return;
     const params = new URLSearchParams(window.location.search);
     const hashShare = window.location.hash.replace(/^#\/?(share\?c=|share=)/, "");
     const raw = params.get("share") || hashShare;
@@ -35,6 +34,37 @@ function Shell() {
     window.history.replaceState(null, "", window.location.pathname);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLoaded, importChat]);
+
+  // Keyboard shortcuts: Ctrl+K new chat, Ctrl+/ focus composer, Esc close overlays.
+  useEffect(() => {
+    if (!isLoaded) return;
+    function onKey(e: KeyboardEvent) {
+      const ctrl = e.ctrlKey || e.metaKey;
+      if (ctrl && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSettingsOpen(false);
+        setSidebarOpen(false);
+        newChat();
+        return;
+      }
+      if (ctrl && e.key === "/") {
+        e.preventDefault();
+        setSettingsOpen(false);
+        const ta = document.querySelector<HTMLTextAreaElement>('textarea[placeholder="Message Asky"]');
+        ta?.focus();
+        return;
+      }
+      if (e.key === "Escape") {
+        if (settingsOpen) {
+          setSettingsOpen(false);
+          return;
+        }
+        if (sidebarOpen) setSidebarOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [isLoaded, newChat, settingsOpen, sidebarOpen]);
 
   if (useIsOffline()) {
     return <OfflineNotice />;
