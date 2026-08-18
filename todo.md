@@ -182,3 +182,9 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] HTML code preview: already exists — fenced html code blocks get a "Live HTML preview" bar with Run/Close, sandboxed iframe; verified in ChatScreen mountCodePreviews
 - [x] Tests (104 pass) + typecheck clean + checkpoint
 - [x] Blank screen bug: root cause = uncaught render crash (state/shape mismatch after bundle update) white-screening the whole app; added class ErrorBoundary in App.tsx with friendly recovery screen — "Reload page" + "Clear corrupted data & reload" buttons + technical details; existing storage load try/catch already defends load phase. tsc clean.
+
+## Batch 65 (2026-08-18) — suggested next steps
+- [x] Web search answers: msg.sources stored on assistant message + clickable citation chips rendered under answer (numbered, target=_blank, title tooltip)
+- [x] Direct PDF download: FileDown button in chat header → exportChatToPdf(chat)
+- [x] Hindi TTS voice: SettingsModal has ttsLang select (en/hi/automatic); speakMessage uses hi → hi-IN exact-region voice preference with graceful fallback; voiceLang setting for automatic mode
+- [x] Tests (104 pass) + typecheck clean + checkpoint + GitHub sync (sync-via-api.py) + deliver

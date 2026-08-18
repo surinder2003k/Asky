@@ -13,6 +13,7 @@ export interface ChatMessage {
   image?: string; // base64 data URL (primary)
   images?: string[]; // base64 data URLs (multi-image payload)
   replyTo?: string; // quoted message id
+  sources?: { title: string; url: string }[]; // web-search source links shown under the answer
   done?: boolean;
   error?: string;
   createdAt: number;

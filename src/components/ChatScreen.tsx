@@ -23,13 +23,13 @@ import type { ChatMessage } from "../storage";
 import { genId } from "../storage";
 import { followUpSuggestions, homeSuggestions } from "../suggestions";
 import { searchInChat } from "../chatSearch";
-import { exportMessageToPdf } from "../pdf";
+import { exportChatToPdf, exportMessageToPdf } from "../pdf";
 import { downloadChatPng, downloadMessagePng } from "../png";
 import { speechSupported, createRecognition, readTranscript, getVoiceLanguageCode, type VoiceStatus } from "../voice";
 import { generateChatTitle } from "../titlegen";
 import { ImageViewer } from "./ImageViewer";
 import { getModelStatus } from "../modelStatus";
-import { Mic, MicOff, Image, FileText, Globe, CalendarClock, PenLine, Search, RefreshCcw, ArrowDownCircle, Star, Pencil, Volume2, VolumeX, Bookmark, BookmarkCheck, ChevronsDownUp, CornerDownRight, ListChecks, Settings } from "lucide-react";
+import { Mic, MicOff, Image, FileText, Globe, CalendarClock, PenLine, Search, RefreshCcw, ArrowDownCircle, Star, Pencil, Volume2, VolumeX, Bookmark, BookmarkCheck, ChevronsDownUp, CornerDownRight, ListChecks, Settings, FileDown } from "lucide-react";
 
 marked.setOptions({ breaks: true });
 
@@ -136,7 +136,8 @@ export default function ChatScreen({
     const text = (el?.textContent || msg.content || "").replace(/\s+/g, " ").trim();
     if (!text) return;
     const utter = new SpeechSynthesisUtterance(text);
-    utter.lang = (settings.ttsLang || settings.voiceLang || navigator.language || "en").replace("_", "-");
+    const langPref = (settings.ttsLang || "en").replace("_", "-");
+    utter.lang = langPref === "automatic" ? (settings.voiceLang || navigator.language || "en").replace("_", "-") : langPref;
     utter.rate = settings.ttsRate ?? 1;
     const pick = () => {
       const voices = synth.getVoices();
@@ -146,7 +147,11 @@ export default function ChatScreen({
         if (v) return v;
       }
       const lang = utter.lang.slice(0, 2);
-      return voices.find((x) => x.lang.startsWith(lang)) || voices[0];
+      // Prefer an exact-region voice first (e.g., hi-IN for Hindi), then any voice in the language.
+      const exact = voices.find((x) => x.lang.toLowerCase().startsWith(utter.lang.toLowerCase()));
+      const langMatch = voices.find((x) => x.lang.startsWith(lang));
+      // If the language is Hindi but only generic voices exist, fall back gracefully.
+      return exact || langMatch || voices[0];
     };
     const voice = pick();
     if (voice) {
@@ -327,11 +332,13 @@ export default function ChatScreen({
       .join("\n\n");
     // ── Web search context: prepend live search results to the user message.
     let searchNote = "";
+    let capturedResults: { title: string; url: string }[] | undefined;
     const wantSearch = settings.webSearch !== false;
     if (wantSearch && text.trim() && !imageBase64 && !opts?.extraImages?.length) {
       try {
         const results = await webSearch(text.trim());
         if (results.length > 0) {
+          capturedResults = results.map((r) => ({ title: r.title, url: r.url }));
           searchNote =
             SEARCH_CONTEXT_PREFIX +
             results.map((r, i) => `${i + 1}. [${r.title}](${r.url}) — ${r.snippet}`).join("\n") +
@@ -377,6 +384,7 @@ export default function ChatScreen({
       content: "",
       reasoning: "",
       done: false,
+      sources: capturedResults,
       createdAt: Date.now(),
     };
     const withUser = [...baseMessages, userMsg, assistantMsg];
@@ -749,6 +757,13 @@ export default function ChatScreen({
           title="Find in chat (Ctrl+F)"
         >
           <Search size={18} />
+        </button>
+        <button
+          onClick={() => exportChatToPdf(chat)}
+          className="rounded-md p-2 hover:bg-[var(--asky-hover)]"
+          title="Download this chat as PDF"
+        >
+          <FileDown size={18} />
         </button>
       <button
         onClick={() => {
@@ -1562,6 +1577,23 @@ function MessageRow({
                   onClick={() => onOpenViewer?.(src)}
                   className="max-h-28 cursor-pointer rounded-lg border border-[var(--asky-border)] hover:opacity-90"
                 />
+              ))}
+            </div>
+          )}
+          {(msg.sources || []).length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              {msg.sources!.map((s, i) => (
+                <a
+                  key={i}
+                  href={s.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex max-w-[160px] items-center gap-1 truncate rounded-md border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] px-2 py-1 text-[11px] text-[var(--asky-accent)] hover:opacity-80"
+                  title={s.title}
+                >
+                  <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[var(--asky-accent-soft)] text-[9px] font-semibold">{i + 1}</span>
+                  <span className="truncate">{s.title}</span>
+                </a>
               ))}
             </div>
           )}
