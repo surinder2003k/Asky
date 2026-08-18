@@ -131,9 +131,9 @@ export function saveSettings(settings: Settings) {
   save(KEY_SETTINGS, settings);
 }
 
-/** Delete chats older than 3 days, keep pinned ones. */
+/** Delete chats older than 5 days, keep pinned ones. */
 export function pruneExpiredChats() {
-  const cutoff = Date.now() - 3 * 24 * 3600 * 1000;
+  const cutoff = Date.now() - 5 * 24 * 3600 * 1000;
   const chats = loadChats().filter((c) => c.pinned || c.updatedAt > cutoff);
   saveChats(chats);
   return chats;

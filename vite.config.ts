@@ -24,5 +24,8 @@ export default defineConfig({
   },
   build: {
     outDir: "dist",
+    // Transpile to ES2017 so the deployed bundle runs on older mobile
+    // browsers (older Android WebView / Safari) instead of a blank screen.
+    target: "es2017",
   },
 });

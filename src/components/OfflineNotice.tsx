@@ -35,7 +35,7 @@ export default function OfflineNotice() {
         </p>
         <button
           onClick={() => window.location.reload()}
-          className="flex items-center gap-1.5 rounded-full bg-white/5 px-2.5 py-1 text-[13px] text-[var(--asky-fg)] hover:bg-white/10"
+          className="flex items-center gap-1.5 rounded-full bg-[var(--asky-hover)] px-2.5 py-1 text-[13px] text-[var(--asky-fg)] hover:bg-[var(--asky-hover2)]"
         >
           <RefreshCw size={13} />
           Retry

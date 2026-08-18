@@ -160,7 +160,7 @@ export default function Sidebar({
         <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />
       )}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-[#202020] transition-transform duration-200 lg:static lg:translate-x-0 lg:z-auto ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-72 flex-col bg-[var(--asky-bg)] transition-transform duration-200 lg:static lg:translate-x-0 lg:z-auto ${
           open ? "translate-x-0" : "-translate-x-full"
         }`}
       >
@@ -168,7 +168,7 @@ export default function Sidebar({
           <div className="flex items-center gap-2">
             <button
               onClick={() => addFolder(prompt("Folder name?") || "New Folder")}
-              className="rounded-md p-2 text-[var(--asky-fg-muted)] hover:bg-white/5 hover:text-[var(--asky-fg)]"
+              className="rounded-md p-2 text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)] hover:text-[var(--asky-fg)]"
               title="New folder"
             >
               <Plus size={18} />
@@ -177,14 +177,14 @@ export default function Sidebar({
           </div>
           <button
             onClick={() => setTheme(settings.theme === "dark" ? "light" : "dark")}
-            className="rounded-md p-2 text-[var(--asky-fg-muted)] hover:bg-white/5 hover:text-[var(--asky-fg)]"
+            className="rounded-md p-2 text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)] hover:text-[var(--asky-fg)]"
             title={`Switch to ${settings.theme === "dark" ? "light" : "dark"} mode`}
           >
             {settings.theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
           </button>
           <button
             onClick={onOpenSettings}
-            className="rounded-md p-2 text-[var(--asky-fg-muted)] hover:bg-white/5 hover:text-[var(--asky-fg)]"
+            className="rounded-md p-2 text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)] hover:text-[var(--asky-fg)]"
             title="Settings"
           >
             <SettingsIcon size={18} />
@@ -197,7 +197,7 @@ export default function Sidebar({
         <div className="px-3 pt-3">
           <button
             onClick={() => createChat()}
-            className="flex w-full items-center gap-2 rounded-xl border border-[var(--asky-border)] px-3 py-2.5 text-sm font-medium hover:bg-white/5"
+            className="flex w-full items-center gap-2 rounded-xl border border-[var(--asky-border)] px-3 py-2.5 text-sm font-medium hover:bg-[var(--asky-hover)]"
           >
             <Plus size={16} />
             New chat
@@ -208,7 +208,7 @@ export default function Sidebar({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search chats"
-              className="w-full rounded-xl border border-[var(--asky-border)] bg-[#2a2a2a] py-2 pl-8 pr-3 text-sm outline-none focus:border-[var(--asky-accent)]"
+              className="w-full rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-input)] py-2 pl-8 pr-3 text-sm outline-none focus:border-[var(--asky-accent)]"
             />
           </div>
         </div>
@@ -223,7 +223,7 @@ export default function Sidebar({
                     {f.name}
                   </span>
                   <button
-                    className="ml-auto hidden rounded p-1 hover:bg-white/10 group-hover:block"
+                    className="ml-auto hidden rounded p-1 hover:bg-[var(--asky-hover2)] group-hover:block"
                     onClick={() => {
                       const name = prompt("Rename folder", f.name);
                       if (name) renameFolder(f.id, name);
@@ -232,21 +232,21 @@ export default function Sidebar({
                     <MoreVertical size={12} />
                   </button>
                   <button
-                    className="hidden rounded p-1 text-[var(--asky-fg-muted)] hover:bg-white/10 group-hover:block"
+                    className="hidden rounded p-1 text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover2)] group-hover:block"
                     onClick={() => confirm(`Delete folder "${f.name}"? Chats move to Recent.`) && deleteFolder(f.id)}
                     title="Delete folder"
                   >
                     <Trash2 size={12} />
                   </button>
                   <button
-                    className="hidden rounded p-1 text-[var(--asky-fg-muted)] hover:bg-white/10 group-hover:block"
+                    className="hidden rounded p-1 text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover2)] group-hover:block"
                     onClick={() => moveFolder(f.id, -1)}
                     title="Move folder up"
                   >
                     <ChevronUp size={12} />
                   </button>
                   <button
-                    className="hidden rounded p-1 text-[var(--asky-fg-muted)] hover:bg-white/10 group-hover:block"
+                    className="hidden rounded p-1 text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover2)] group-hover:block"
                     onClick={() => moveFolder(f.id, 1)}
                     title="Move folder down"
                   >
@@ -361,14 +361,14 @@ export default function Sidebar({
 
           {filtered.length === 0 && (
             <p className="px-3 py-6 text-center text-xs text-[var(--asky-fg-muted)]">
-              {q ? "No chats match your search." : "No chats yet.\nChats auto-delete after 3 days (pinned chats are kept)."}
+              {q ? "No chats match your search." : "No chats yet.\nChats auto-delete after 5 days (pinned chats are kept)."}
             </p>
           )}
         </nav>
 
         <div className="border-t border-[var(--asky-border)] px-3 py-2">
           {showClearDialog ? (
-            <div className="rounded-lg border border-[var(--asky-border)] bg-[#2a2a2a] p-3 text-sm">
+            <div className="rounded-lg border border-[var(--asky-border)] bg-[var(--asky-bg-input)] p-3 text-sm">
               <p className="mb-3">Clear all chats? Pinned chats are kept.</p>
               <div className="flex gap-2">
                 <button
@@ -381,7 +381,7 @@ export default function Sidebar({
                   Clear
                 </button>
                 <button
-                  className="flex-1 rounded-full px-3 py-1.5 hover:bg-white/10"
+                  className="flex-1 rounded-full px-3 py-1.5 hover:bg-[var(--asky-hover2)]"
                   onClick={() => setShowClearDialog(false)}
                 >
                   Cancel
@@ -390,10 +390,10 @@ export default function Sidebar({
             </div>
           ) : (
             <div className="flex items-center justify-between text-xs text-[var(--asky-fg-muted)]">
-              <span>Auto-delete 3d</span>
+              <span>Auto-delete 5d</span>
               <div className="flex gap-1">
                 <button
-                  className="rounded-md p-1.5 hover:bg-white/10 hover:text-[var(--asky-fg)]"
+                  className="rounded-md p-1.5 hover:bg-[var(--asky-hover2)] hover:text-[var(--asky-fg)]"
                   title="Save current chat as PNG image"
                   onClick={() => {
                     const cur = chats.find((c) => c.id === activeChatId);
@@ -403,21 +403,21 @@ export default function Sidebar({
                   <Image size={14} />
                 </button>
                 <button
-                  className="rounded-md p-1.5 hover:bg-white/10 hover:text-[var(--asky-fg)]"
+                  className="rounded-md p-1.5 hover:bg-[var(--asky-hover2)] hover:text-[var(--asky-fg)]"
                   title="Export all chats as zip"
                   onClick={() => exportAllChatsZip(chats.filter((c) => !c.pinned).length > 0 ? chats : chats)}
                 >
                   <Archive size={14} />
                 </button>
                 <button
-                  className="rounded-md p-1.5 hover:bg-white/10 hover:text-[var(--asky-fg)]"
+                  className="rounded-md p-1.5 hover:bg-[var(--asky-hover2)] hover:text-[var(--asky-fg)]"
                   title="Import chat"
                   onClick={() => { setImportText(""); setShowImport((v) => !v); }}
                 >
                   <FilePlus size={14} />
                 </button>
                 <button
-                  className="rounded-md p-1.5 hover:bg-white/10 hover:text-[var(--asky-fg)]"
+                  className="rounded-md p-1.5 hover:bg-[var(--asky-hover2)] hover:text-[var(--asky-fg)]"
                   title="Clear chat history"
                   onClick={() => setShowClearDialog(true)}
                 >
@@ -427,7 +427,7 @@ export default function Sidebar({
             </div>
           )}
           {showImport && (
-            <div className="mt-2 rounded-lg border border-[var(--asky-border)] bg-[#2a2a2a] p-3 text-sm">
+            <div className="mt-2 rounded-lg border border-[var(--asky-border)] bg-[var(--asky-bg-input)] p-3 text-sm">
               <p className="mb-2 text-xs text-[var(--asky-fg-muted)]">
                 Paste a shared Asky link or chat JSON, then open it as a new chat.
               </p>
@@ -436,7 +436,7 @@ export default function Sidebar({
                 onChange={(e) => setImportText(e.target.value)}
                 placeholder="https://...?share=... or { ... }"
                 rows={3}
-                className="w-full rounded-md bg-[#202020] p-2 text-xs outline-none focus:ring-1 focus:ring-[var(--asky-accent)]"
+                className="w-full rounded-md bg-[var(--asky-bg)] p-2 text-xs outline-none focus:ring-1 focus:ring-[var(--asky-accent)]"
               />
               <div className="mt-2 flex gap-2">
                 <button
@@ -449,7 +449,7 @@ export default function Sidebar({
                   Import
                 </button>
                 <button
-                  className="flex-1 rounded-full px-3 py-1.5 hover:bg-white/10"
+                  className="flex-1 rounded-full px-3 py-1.5 hover:bg-[var(--asky-hover2)]"
                   onClick={() => setShowImport(false)}
                 >
                   Cancel
@@ -576,7 +576,7 @@ function ChatRow({
   }
 
   return (
-    <div className={`group relative mb-0.5 flex items-center rounded-lg ${active ? "bg-[#2f2f2f]" : "hover:bg-[#2a2a2a]"}`}>
+    <div className={`group relative mb-0.5 flex items-center rounded-lg ${active ? "bg-[var(--asky-bg-elev)]" : "hover:bg-[var(--asky-bg-input)]"}`}>
       <button
         onClick={onOpen}
         onDoubleClick={() => {
@@ -666,51 +666,51 @@ function ChatRow({
       </button>
       <button
         onClick={() => setMenuOpen(!menuOpen)}
-        className="mr-1 rounded p-1 text-[var(--asky-fg-muted)] opacity-0 hover:bg-white/10 group-hover:opacity-100"
+        className="mr-1 rounded p-1 text-[var(--asky-fg-muted)] opacity-0 hover:bg-[var(--asky-hover2)] group-hover:opacity-100"
       >
         <MoreVertical size={14} />
       </button>
       {menuOpen && (
-        <div className="absolute right-2 top-full z-10 mt-1 w-44 overflow-hidden rounded-lg border border-[var(--asky-border)] bg-[#2a2a2a] py-1 text-sm shadow-lg">
-          <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onPin(); }}>
+        <div className="absolute right-2 top-full z-10 mt-1 w-44 overflow-hidden rounded-lg border border-[var(--asky-border)] bg-[var(--asky-bg-input)] py-1 text-sm shadow-lg">
+          <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-[var(--asky-hover)]" onClick={() => { setMenuOpen(false); onPin(); }}>
             <Pin size={13} /> {chat.pinned ? "Unpin" : "Pin"}
           </button>
-          <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); setTitleDraft(chat.title); setEditing(true); }}>
+          <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-[var(--asky-hover)]" onClick={() => { setMenuOpen(false); setTitleDraft(chat.title); setEditing(true); }}>
             Rename
           </button>
           {folders.length > 0 && (
             <div className="border-t border-[var(--asky-border)] py-1">
               <span className="px-3 text-[11px] uppercase text-[var(--asky-fg-muted)]">Move to</span>
-              <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onMove(null); }}>
+              <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-[var(--asky-hover)]" onClick={() => { setMenuOpen(false); onMove(null); }}>
                 <FolderPlus size={13} /> No folder
               </button>
               {folders.map((f) => (
-                <button key={f.id} className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onMove(f.id); }}>
+                <button key={f.id} className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-[var(--asky-hover)]" onClick={() => { setMenuOpen(false); onMove(f.id); }}>
                   <FolderPlus size={13} /> {f.name}
                 </button>
               ))}
             </div>
           )}
           <div className="border-t border-[var(--asky-border)]">
-            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onExportMd(); }}>
+            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-[var(--asky-hover)]" onClick={() => { setMenuOpen(false); onExportMd(); }}>
               <Download size={13} /> Export .md
             </button>
-            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onExportJson(); }}>
+            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-[var(--asky-hover)]" onClick={() => { setMenuOpen(false); onExportJson(); }}>
               <FilePlus size={13} /> Export .json
             </button>
-            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onShare(); }}>
+            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-[var(--asky-hover)]" onClick={() => { setMenuOpen(false); onShare(); }}>
               <LinkIcon size={13} /> Copy share link
             </button>
-            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onExportPdf(); }}>
+            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-[var(--asky-hover)]" onClick={() => { setMenuOpen(false); onExportPdf(); }}>
               <Download size={13} /> Export .pdf
             </button>
-            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onExportPng(); }}>
+            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-[var(--asky-hover)]" onClick={() => { setMenuOpen(false); onExportPng(); }}>
               <Image size={13} /> Export .png
             </button>
-            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-white/5" onClick={() => { setMenuOpen(false); onExportWhatsApp(); }}>
+            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-[var(--asky-hover)]" onClick={() => { setMenuOpen(false); onExportWhatsApp(); }}>
               <LinkIcon size={13} /> Export for WhatsApp
             </button>
-            <button className="flex w-full items-center gap-2 px-3 py-1.5 text-red-400 hover:bg-white/5" onClick={() => { setMenuOpen(false); onDelete(); }}>
+            <button className="flex w-full items-center gap-2 px-3 py-1.5 text-red-400 hover:bg-[var(--asky-hover)]" onClick={() => { setMenuOpen(false); onDelete(); }}>
               <Trash2 size={13} /> Delete
             </button>
           </div>
@@ -731,7 +731,7 @@ function DeleteConfirmDialog({
 }) {
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-6">
-      <div className="w-full max-w-sm rounded-xl border border-[var(--asky-border)] bg-[#2a2a2a] p-5 shadow-xl">
+      <div className="w-full max-w-sm rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-input)] p-5 shadow-xl">
         <h3 className="text-[15px] font-semibold text-[var(--asky-fg)]">Delete chat</h3>
         <p className="mt-2 text-sm text-[var(--asky-fg-muted)]">
           Delete <span className="font-medium text-[var(--asky-fg)]">{title}</span>? This cannot be undone.
@@ -739,7 +739,7 @@ function DeleteConfirmDialog({
         <div className="mt-4 flex justify-end gap-2">
           <button
             onClick={onCancel}
-            className="rounded-lg px-3.5 py-2 text-sm text-[var(--asky-fg-muted)] hover:bg-white/10"
+            className="rounded-lg px-3.5 py-2 text-sm text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover2)]"
           >
             Cancel
           </button>

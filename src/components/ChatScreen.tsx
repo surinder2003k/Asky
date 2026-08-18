@@ -480,7 +480,7 @@ export default function ChatScreen({
           Ask anything. Attach an image to analyze it (works with vision-capable models).
         </p>
         <p className="max-w-sm text-center text-xs text-[var(--asky-fg-muted)]">
-          Chats are saved on this device and auto-delete 3 days after the last message (pinned chats are kept).
+          Chats are saved on this device and auto-delete 5 days after the last message (pinned chats are kept).
         </p>
         <ModelChip
           model={MODELS.find((m) => m.key === homeModelKey) || MODELS[0]}
@@ -529,7 +529,7 @@ export default function ChatScreen({
                       setInput((p) => (p ? p + "\n" + t.content : t.content));
                       setShowChatTemplates(false);
                     }}
-                    className="w-full rounded-md px-2.5 py-1.5 text-left text-[12px] hover:bg-white/5"
+                    className="w-full rounded-md px-2.5 py-1.5 text-left text-[12px] hover:bg-[var(--asky-hover)]"
                   >
                     <div className="font-medium text-[var(--asky-fg)]">{t.name}</div>
                     <div className="truncate text-[10px] text-[var(--asky-fg-muted)]">{t.content}</div>
@@ -594,7 +594,7 @@ export default function ChatScreen({
                         setInput((prev) => (prev ? prev + "\n" + t.content : t.content));
                         setShowTemplates(false);
                       }}
-                      className="w-full rounded-md px-2.5 py-1.5 text-left text-[12px] hover:bg-white/5"
+                      className="w-full rounded-md px-2.5 py-1.5 text-left text-[12px] hover:bg-[var(--asky-hover)]"
                     >
                       <div className="font-medium text-[var(--asky-fg)]">{t.name}</div>
                       <div className="truncate text-[10px] text-[var(--asky-fg-muted)]">{t.content}</div>
@@ -605,7 +605,7 @@ export default function ChatScreen({
             </div>
           )}
           <div className="flex items-end gap-2 rounded-2xl border border-[var(--asky-border)] bg-[var(--asky-bg-input)] px-3 py-2">
-            <label className="cursor-pointer rounded-md p-1.5 text-[var(--asky-accent)] hover:bg-white/5">
+            <label className="cursor-pointer rounded-md p-1.5 text-[var(--asky-accent)] hover:bg-[var(--asky-hover)]">
               <ImagePlus size={19} />
               <input
                 type="file"
@@ -662,7 +662,7 @@ export default function ChatScreen({
             {speechSupported() && !isStreaming && (
               <button
                 onClick={toggleVoice}
-                className={`mb-0.5 rounded-full p-2 ${voiceStatus === "listening" ? "animate-pulse bg-red-500/20 text-red-400" : "bg-[var(--asky-bg-elev)] text-[var(--asky-fg-muted)] hover:bg-white/5"}`}
+                className={`mb-0.5 rounded-full p-2 ${voiceStatus === "listening" ? "animate-pulse bg-red-500/20 text-red-400" : "bg-[var(--asky-bg-elev)] text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)]"}`}
                 title={voiceStatus === "listening" ? "Stop recording" : "Voice input"}
               >
                 {voiceStatus === "listening" ? <MicOff size={16} /> : <Mic size={16} />}
@@ -708,7 +708,7 @@ export default function ChatScreen({
     <div className="flex h-full flex-col">
       {/* header */}
       <header className="flex shrink-0 items-center gap-2 border-b border-[var(--asky-border)] px-3 py-2">
-        <button onClick={onToggleSidebar} className="rounded-md p-2 hover:bg-white/5 lg:hidden">
+        <button onClick={onToggleSidebar} className="rounded-md p-2 hover:bg-[var(--asky-hover)] lg:hidden">
           <PanelLeft size={20} />
         </button>
         <ModelChip
@@ -728,7 +728,7 @@ export default function ChatScreen({
         </span>
         <button
           onClick={() => setFindOpen((v) => !v)}
-          className={`rounded-md p-2 hover:bg-white/5 ${findOpen ? "text-[var(--asky-accent)]" : ""}`}
+          className={`rounded-md p-2 hover:bg-[var(--asky-hover)] ${findOpen ? "text-[var(--asky-accent)]" : ""}`}
           title="Find in chat (Ctrl+F)"
         >
           <Search size={18} />
@@ -738,7 +738,7 @@ export default function ChatScreen({
           setChatSystemPrompt(chat?.systemPrompt || "");
           setChatSettingsOpen(true);
         }}
-        className="rounded-md p-2 text-[var(--asky-fg-muted)] hover:bg-white/5 hover:text-[var(--asky-fg)]"
+        className="rounded-md p-2 text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)] hover:text-[var(--asky-fg)]"
         title="Chat settings (system prompt)"
       >
         <Settings size={17} />
@@ -752,7 +752,7 @@ export default function ChatScreen({
           >
             <div className="mb-3 flex items-center justify-between">
               <h3 className="text-lg font-semibold">Chat settings</h3>
-              <button onClick={() => setChatSettingsOpen(false)} className="rounded-md p-1 hover:bg-white/10">
+              <button onClick={() => setChatSettingsOpen(false)} className="rounded-md p-1 hover:bg-[var(--asky-hover2)]">
                 <X size={16} />
               </button>
             </div>
@@ -770,7 +770,7 @@ export default function ChatScreen({
             <div className="mt-3 flex justify-end gap-2">
               <button
                 onClick={() => setChatSettingsOpen(false)}
-                className="rounded-md px-3 py-1.5 text-sm hover:bg-white/10"
+                className="rounded-md px-3 py-1.5 text-sm hover:bg-[var(--asky-hover2)]"
               >
                 Cancel
               </button>
@@ -806,7 +806,7 @@ export default function ChatScreen({
               setFindOpen(false);
               setFindQ("");
             }}
-            className="rounded-md p-1 hover:bg-white/10"
+            className="rounded-md p-1 hover:bg-[var(--asky-hover2)]"
           >
             <X size={14} />
           </button>
@@ -919,14 +919,14 @@ export default function ChatScreen({
       <div className="pointer-events-none absolute bottom-28 right-5 flex flex-col gap-1">
         <button
           onClick={() => scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" })}
-          className="pointer-events-auto rounded-full border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] p-1.5 shadow hover:bg-white/5"
+          className="pointer-events-auto rounded-full border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] p-1.5 shadow hover:bg-[var(--asky-hover)]"
           title="Scroll to top"
         >
           <ArrowUp size={15} />
         </button>
         <button
           onClick={() => scrollToBottom()}
-          className="pointer-events-auto rounded-full border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] p-1.5 shadow hover:bg-white/5"
+          className="pointer-events-auto rounded-full border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] p-1.5 shadow hover:bg-[var(--asky-hover)]"
           title="Scroll to bottom"
         >
           <ArrowDown size={15} />
@@ -973,7 +973,7 @@ export default function ChatScreen({
             </div>
           )}
 <div className="flex items-end gap-2 rounded-2xl border border-[var(--asky-border)] bg-[var(--asky-bg-input)] px-3 py-2">
-            <label className="cursor-pointer rounded-md p-1.5 text-[var(--asky-accent)] hover:bg-white/5">
+            <label className="cursor-pointer rounded-md p-1.5 text-[var(--asky-accent)] hover:bg-[var(--asky-hover)]">
               <ImagePlus size={19} />
               <input
                 type="file"
@@ -1035,7 +1035,7 @@ export default function ChatScreen({
             {isStreaming ? (
               <button
                 onClick={stopGeneration}
-                className="mb-0.5 rounded-full bg-[var(--asky-bg-elev)] p-2 text-[var(--asky-fg)] hover:bg-white/5"
+                className="mb-0.5 rounded-full bg-[var(--asky-bg-elev)] p-2 text-[var(--asky-fg)] hover:bg-[var(--asky-hover)]"
                 title="Stop generating"
               >
                 <Square size={16} />
@@ -1045,7 +1045,7 @@ export default function ChatScreen({
                 {speechSupported() && !isStreaming && (
                   <button
                     onClick={toggleVoice}
-                    className={`mb-0.5 rounded-full p-2 ${voiceStatus === "listening" ? "animate-pulse bg-red-500/20 text-red-400" : "bg-[var(--asky-bg-elev)] text-[var(--asky-fg-muted)] hover:bg-white/5"}`}
+                    className={`mb-0.5 rounded-full p-2 ${voiceStatus === "listening" ? "animate-pulse bg-red-500/20 text-red-400" : "bg-[var(--asky-bg-elev)] text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)]"}`}
                     title={voiceStatus === "listening" ? "Stop recording" : "Voice input"}
                   >
                     {voiceStatus === "listening" ? <MicOff size={16} /> : <Mic size={16} />}
@@ -1100,7 +1100,7 @@ function FindBar({
               const el = document.querySelector(`[data-msg-id="${h.msgId}"]`);
               el?.scrollIntoView({ behavior: "smooth", block: "center" });
             }}
-            className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-white/10"
+            className="flex w-full items-start gap-2 rounded-md px-2 py-1.5 text-left text-xs hover:bg-[var(--asky-hover2)]"
           >
             <span className="mt-0.5 shrink-0 rounded bg-[var(--asky-accent-soft)] px-1 text-[10px] font-semibold uppercase text-[var(--asky-accent)]">
               {msg.role === "user" ? "You" : "Asky"}
@@ -1150,7 +1150,7 @@ function ModelChip({
     <div className="relative">
       <button
         onClick={() => setOpen(!open)}
-        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium hover:bg-white/5"
+        className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium hover:bg-[var(--asky-hover)]"
       >
         <span className="text-[var(--asky-fg)]">{displayName}</span>
         <span className="text-xs text-[var(--asky-fg-muted)]">
@@ -1163,7 +1163,11 @@ function ModelChip({
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
-          <div className="absolute left-0 top-full z-50 mt-1 w-72 overflow-hidden rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] py-2 shadow-xl">
+          <div
+            className="model-picker-panel absolute left-0 top-full z-50 mt-1.5 w-[300px] max-w-[calc(100vw-24px)] overflow-hidden rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] shadow-2xl shadow-black/25"
+            style={{ maxHeight: "min(480px, calc(100dvh - 120px))" }}
+          >
+          <div className="flex flex-col overflow-y-auto overscroll-contain px-1.5 py-1.5">
             {chipStatus === "rate-limited" && suggestKey && (
               <div className="flex items-center gap-2 border-b border-[var(--asky-border)] bg-red-500/10 px-3 py-2">
                 <span className="text-[12px] text-red-400">{model.label} hit its limit.</span>
@@ -1236,6 +1240,7 @@ function ModelChip({
               </div>
             )}
           </div>
+          </div>
         </>
       )}
     </div>
@@ -1269,7 +1274,7 @@ function ModelOptionRow({
         onDone();
       }}
       onContextMenu={(e) => e.preventDefault()}
-      className={`group flex w-full items-center justify-between px-3 py-1.5 text-sm hover:bg-white/5 ${
+      className={`group flex w-full items-center justify-between px-3 py-1.5 text-sm hover:bg-[var(--asky-hover)] ${
         model.key === currentModelKey ? "bg-[var(--asky-accent-soft)]" : ""
       } ${!hasKey ? "cursor-not-allowed opacity-40" : ""}`}
     >
@@ -1393,7 +1398,7 @@ function MessageRow({
                 rows={3}
               />
               <div className="flex justify-end gap-2">
-                <button className="rounded-md px-2 py-1 text-xs hover:bg-white/10" onClick={() => setEditing(false)}>
+                <button className="rounded-md px-2 py-1 text-xs hover:bg-[var(--asky-hover2)]" onClick={() => setEditing(false)}>
                   Cancel
                 </button>
                 <button
@@ -1511,7 +1516,7 @@ function MessageRow({
             <div className="flex items-center justify-between gap-2">
               <span className="text-sm italic text-[var(--asky-fg-muted)]">Long reply ({lenWords} words)</span>
               <button
-                className="rounded-md px-2 py-1 text-[11px] text-[var(--asky-accent)] hover:bg-white/5"
+                className="rounded-md px-2 py-1 text-[11px] text-[var(--asky-accent)] hover:bg-[var(--asky-hover)]"
                 onClick={() => setCollapsed(false)}
               >
                 Show full reply
@@ -1548,14 +1553,14 @@ function MessageRow({
           <div className="mt-1 flex flex-wrap gap-2">
             <button
               onClick={() => onCopy(msg.content)}
-              className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[var(--asky-fg-muted)] hover:bg-white/5 hover:text-[var(--asky-fg)]"
+              className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)] hover:text-[var(--asky-fg)]"
             >
               {copied ? <Check size={11} /> : <Copy size={11} />}
               {copied ? "Copied" : "Copy"}
             </button>
             <button
               onClick={() => onExportPdf?.(msg)}
-              className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[var(--asky-fg-muted)] hover:bg-white/5 hover:text-[var(--asky-fg)]"
+              className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)] hover:text-[var(--asky-fg)]"
               title="Save reply as PDF"
             >
               🖨️ PDF
@@ -1563,7 +1568,7 @@ function MessageRow({
             {onCopyPng && (
               <button
                 onClick={() => onCopyPng(msg)}
-                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[var(--asky-fg-muted)] hover:bg-white/5 hover:text-[var(--asky-fg)]"
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)] hover:text-[var(--asky-fg)]"
                 title="Save reply as image (PNG)"
               >
                 {copiedPng ? <Check size={11} /> : <Image size={11} />}
@@ -1573,7 +1578,7 @@ function MessageRow({
             {ttsEnabled && onSpeak && (
               <button
                 onClick={() => onSpeak(msg)}
-                className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] hover:bg-white/5 ${
+                className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] hover:bg-[var(--asky-hover)] ${
                   ttsSpeaking ? "text-[var(--asky-accent)]" : "text-[var(--asky-fg-muted)] hover:text-[var(--asky-fg)]"
                 }`}
                 title="Listen to this reply"
@@ -1586,7 +1591,7 @@ function MessageRow({
               <button
                 onClick={onTogglePin}
                 className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] ${
-                  isPinned ? "text-amber-400" : "text-[var(--asky-fg-muted)] hover:bg-white/5 hover:text-[var(--asky-fg)]"
+                  isPinned ? "text-amber-400" : "text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)] hover:text-[var(--asky-fg)]"
                 }`}
                 title={isPinned ? "Unpin this message" : "Pin this message"}
               >
@@ -1597,7 +1602,7 @@ function MessageRow({
             {canCollapse && (
               <button
                 onClick={() => setCollapsed(true)}
-                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[var(--asky-fg-muted)] hover:bg-white/5 hover:text-[var(--asky-fg)]"
+                className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)] hover:text-[var(--asky-fg)]"
                 title="Collapse this reply"
               >
                 <ChevronsDownUp size={11} /> Collapse
@@ -1607,14 +1612,14 @@ function MessageRow({
               <>
                 <button
                   onClick={() => onRegenerate(msg.id)}
-                  className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[var(--asky-fg-muted)] hover:bg-white/5 hover:text-[var(--asky-fg)]"
+                  className="flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)] hover:text-[var(--asky-fg)]"
                   title="Regenerate this reply with the same model"
                 >
                   <RefreshCcw size={11} /> Regen
                 </button>
                 <button
                   onClick={() => onPickModelRegen?.(msg.id)}
-                  className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] ${regenSelected ? "bg-[var(--asky-accent-soft)] text-[var(--asky-accent)]" : "text-[var(--asky-fg-muted)] hover:bg-white/5 hover:text-[var(--asky-fg)]"}`}
+                  className={`flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] ${regenSelected ? "bg-[var(--asky-accent-soft)] text-[var(--asky-accent)]" : "text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)] hover:text-[var(--asky-fg)]"}`}
                   title="Regenerate with a different model — pick one from the model list above"
                 >
                   <RefreshCcw size={11} /> Model…

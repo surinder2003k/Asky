@@ -62,7 +62,7 @@ export default function PinScreen({
                 if (next.length >= 4) submit(next);
               }
             }}
-            className="flex h-14 items-center justify-center rounded-full border border-[var(--asky-border)] text-lg font-medium hover:bg-white/5 active:scale-95"
+            className="flex h-14 items-center justify-center rounded-full border border-[var(--asky-border)] text-lg font-medium hover:bg-[var(--asky-hover)] active:scale-95"
           >
             {k === "del" ? <Delete size={18} /> : k === "ok" ? "✓" : k}
           </button>

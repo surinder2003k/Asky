@@ -58,7 +58,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
       <div className="relative w-full max-w-xl bg-[var(--asky-bg-elev)] sm:rounded-2xl sm:my-8">
         <div className="flex items-center justify-between border-b border-[var(--asky-border)] px-5 py-3.5">
           <h2 className="text-lg font-semibold">Settings</h2>
-          <button onClick={onClose} className="rounded-md p-1.5 hover:bg-white/5">
+          <button onClick={onClose} className="rounded-md p-1.5 hover:bg-[var(--asky-hover)]">
             <X size={18} />
           </button>
         </div>
@@ -80,7 +80,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                       <span className="text-sm font-medium">{label}</span>
                       <button
                         onClick={() => window.open(getApiUrl, "_blank", "noopener,noreferrer")}
-                        className="flex items-center gap-1 rounded-md bg-white/5 px-2 py-0.5 text-[11px] font-medium text-[var(--asky-accent)] hover:bg-white/10"
+                        className="flex items-center gap-1 rounded-md bg-[var(--asky-hover)] px-2 py-0.5 text-[11px] font-medium text-[var(--asky-accent)] hover:bg-[var(--asky-hover2)]"
                         title={`Get your API key from ${label}`}
                       >
                         Get API Key
@@ -133,7 +133,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                   className={`flex-1 rounded-xl border px-3 py-2 text-sm capitalize ${
                     settings.theme === t
                       ? "border-[var(--asky-accent)] bg-[var(--asky-accent-soft)]"
-                      : "border-[var(--asky-border)] hover:bg-white/5"
+                      : "border-[var(--asky-border)] hover:bg-[var(--asky-hover)]"
                   }`}
                 >
                   {t}
@@ -149,7 +149,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                   className={`flex-1 rounded-xl border px-3 py-2 text-sm capitalize ${
                     settings.accent === a
                       ? "border-[var(--asky-accent)] bg-[var(--asky-accent-soft)]"
-                      : "border-[var(--asky-border)] hover:bg-white/5"
+                      : "border-[var(--asky-border)] hover:bg-[var(--asky-hover)]"
                   }`}
                 >
                   {a}
@@ -166,7 +166,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                   className={`flex-1 rounded-xl border px-3 py-2 text-sm ${
                     (settings.voiceLang || "en") === l.key
                       ? "border-[var(--asky-accent)] bg-[var(--asky-accent-soft)]"
-                      : "border-[var(--asky-border)] hover:bg-white/5"
+                      : "border-[var(--asky-border)] hover:bg-[var(--asky-hover)]"
                   }`}
                 >
                   {l.label}
@@ -257,7 +257,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                   }`}
                 >
                   <span className="text-[var(--asky-fg-muted)]">{s.label}</span>
-                  <kbd className="rounded-md bg-white/5 px-1.5 py-0.5 text-xs font-mono text-[var(--asky-fg)]">
+                  <kbd className="rounded-md bg-[var(--asky-hover)] px-1.5 py-0.5 text-xs font-mono text-[var(--asky-fg)]">
                     {s.keys}
                   </kbd>
                 </div>
