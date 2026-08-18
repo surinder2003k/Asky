@@ -201,3 +201,6 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] Web search changed to ChatGPT-style: OFF by default (settings.webSearch now defaults to false). Search never hijacks normal chat — 'Hi', tables, code, stories all reply directly. User can toggle web search ON per-chat from the chat header settings panel (Globe chip) or default in Settings.
 - [x] Search results no longer merged into the visible user message bubble — they go as hidden context only; the user's own text stays exactly as typed in the user bubble.
 - [x] SettingsModal webSearch toggle updated to match new default (off), with clear label.
+
+## Batch 68 (2026-08-18) — model picker stuck scroll on mobile (user screenshot)
+- [x] Model picker touch-scroll fixed: removed the nested-overflow pattern (overflow-hidden panel + inner overflow-y-auto div broke touch scroll on Android WebView), replaced with a single touch-pan-y scroll container at 100% max-height; picker panel now overflow:visible. Same touch-pan-y fix applied to both templates dropdowns and the find bar. 109 tests pass, typecheck clean.

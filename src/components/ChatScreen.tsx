@@ -584,7 +584,7 @@ export default function ChatScreen({
               <ListChecks size={12} /> Templates
             </button>
             {showChatTemplates && (
-              <div className="absolute bottom-full left-0 z-20 mb-1 max-h-56 w-64 overflow-y-auto rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] p-1 shadow-lg">
+              <div className="absolute bottom-full left-0 z-20 mb-1 max-h-56 w-64 touch-pan-y overflow-y-auto rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] p-1 shadow-lg">
                 {(settings.templates || []).map((t, i) => (
                   <button
                     key={i}
@@ -649,7 +649,7 @@ export default function ChatScreen({
                 <ListChecks size={12} /> Templates
               </button>
               {showTemplates && (
-                <div className="absolute bottom-full left-0 z-20 mb-1 max-h-56 w-64 overflow-y-auto rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] p-1 shadow-lg">
+                <div className="absolute bottom-full left-0 z-20 mb-1 max-h-56 w-64 touch-pan-y overflow-y-auto rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] p-1 shadow-lg">
                   {(settings.templates || []).map((t, i) => (
                     <button
                       key={i}
@@ -1234,10 +1234,11 @@ function ModelChip({
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
-            className="model-picker-panel absolute left-0 top-full z-50 mt-1.5 w-[300px] max-w-[calc(100vw-24px)] overflow-hidden rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] shadow-2xl shadow-black/25"
+            className="model-picker-panel absolute left-0 top-full z-50 mt-1.5 w-[300px] max-w-[calc(100vw-24px)] rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] shadow-2xl shadow-black/25"
             style={{ maxHeight: "min(480px, calc(100dvh - 120px))" }}
           >
-          <div className="flex flex-col overflow-y-auto overscroll-contain px-1.5 py-1.5">
+          {/* Single scroll container (nested overflow + flex broke touch scroll on some Android WebViews) */}
+          <div className="flex flex-col touch-pan-y overflow-y-auto overscroll-contain px-1.5 py-1.5" style={{ maxHeight: "100%" }}>
             {chipStatus === "rate-limited" && suggestKey && (
               <div className="flex items-center gap-2 border-b border-[var(--asky-border)] bg-red-500/10 px-3 py-2">
                 <span className="text-[12px] text-red-400">{model.label} hit its limit.</span>
