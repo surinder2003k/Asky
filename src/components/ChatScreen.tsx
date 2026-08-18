@@ -227,8 +227,8 @@ export default function ChatScreen({
       </div>
 
       {/* composer */}
-      <div className="border-t border-[var(--asky-border)] px-3 py-3">
-        <div className="mx-auto max-w-3xl">
+      <div className="shrink-0 border-t border-[var(--asky-border)] px-3 py-3">
+        <div className="mx-auto w-full max-w-3xl">
           {image && (
             <div className="relative mb-2 inline-block">
               <img src={image} alt="attachment" className="h-20 rounded-lg border border-[var(--asky-border)]" />
@@ -289,7 +289,7 @@ export default function ChatScreen({
   return (
     <div className="flex h-full flex-col">
       {/* header */}
-      <header className="flex items-center gap-2 border-b border-[var(--asky-border)] px-3 py-2">
+      <header className="flex shrink-0 items-center gap-2 border-b border-[var(--asky-border)] px-3 py-2">
         <button onClick={onToggleSidebar} className="rounded-md p-2 hover:bg-white/5 lg:hidden">
           <PanelLeft size={20} />
         </button>
@@ -308,7 +308,7 @@ export default function ChatScreen({
       </header>
 
       {/* messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
         <div className="mx-auto flex max-w-3xl flex-col gap-5 px-4 py-6">
           {!hasContent && (
             <div className="flex flex-col items-center gap-3 pt-24">
@@ -372,8 +372,8 @@ export default function ChatScreen({
       </div>
 
       {/* composer */}
-      <div className="border-t border-[var(--asky-border)] px-3 py-3">
-        <div className="mx-auto max-w-3xl">
+      <div className="shrink-0 border-t border-[var(--asky-border)] px-3 py-3">
+        <div className="mx-auto w-full max-w-3xl">
           {image && (
             <div className="relative mb-2 inline-block">
               <img src={image} alt="attachment" className="h-20 rounded-lg border border-[var(--asky-border)]" />
@@ -468,7 +468,7 @@ function ModelChip({
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div className="absolute left-0 top-full z-50 mt-1 w-72 overflow-hidden rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] py-2 shadow-xl">
-            {(["nvidia", "mistral", "groq", "openrouter"] as const).map((pk) => (
+            {(["nvidia", "mistral", "groq", "openrouter", "opencode"] as const).map((pk) => (
               <div key={pk}>
                 <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--asky-fg-muted)]">
                   {PROVIDERS[pk].label}
