@@ -40,6 +40,7 @@ interface Ctx extends AppState {
   setPinEnabled: (on: boolean, pinHash?: number) => void;
   setCustomInstructions: (v: string) => void;
   toggleFavorite: (modelKey: string) => void;
+  recordModelUsed: (modelKey: string) => void;
   renameModel: (modelKey: string, nickname: string) => void;
   setCustomModels: (models: Settings["customModels"]) => void;
   updateSettings: (patch: Partial<Settings>) => void;
@@ -192,6 +193,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
           favoriteModelKeys: (settings.favoriteModelKeys ?? []).includes(modelKey)
             ? (settings.favoriteModelKeys ?? []).filter((k) => k !== modelKey)
             : [...(settings.favoriteModelKeys ?? []), modelKey],
+        }),
+      recordModelUsed: (modelKey) =>
+        updateSettings({
+          lastUsedModelKeys: [modelKey, ...(settings.lastUsedModelKeys ?? []).filter((k) => k !== modelKey)].slice(0, 6),
         }),
       renameModel: (modelKey, nickname) =>
         updateSettings({ nicknames: { ...settings.nicknames, [modelKey]: nickname } }),

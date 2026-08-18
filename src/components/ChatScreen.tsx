@@ -118,6 +118,7 @@ export default function ChatScreen({
     toggleMessagePin,
     setActiveChatId,
     deleteChat,
+    recordModelUsed,
   } = useApp();
   const [input, setInput] = useState("");
   const [image, setImage] = useState<string | null>(null);
@@ -547,7 +548,10 @@ export default function ChatScreen({
         </p>
         <ModelChip
           model={MODELS.find((m) => m.key === homeModelKey) || MODELS[0]}
-          setModelKey={(k) => setHomeModelKey(k)}
+          setModelKey={(k) => {
+            recordModelUsed(k);
+            setHomeModelKey(k);
+          }}
           open={showHomePicker}
           setOpen={setShowHomePicker}
           currentProviderKey={settings.apiKeys}
@@ -776,6 +780,7 @@ export default function ChatScreen({
         <ModelChip
           model={model}
           setModelKey={(k) => {
+            recordModelUsed(k);
             updateChat(chat.id, { modelKey: k });
             if (pendingRegenFor) regenerateAssistant(pendingRegenFor, k);
           }}
@@ -1196,10 +1201,16 @@ function ModelChip({
   setOpen: (v: boolean) => void;
   currentProviderKey: Partial<Record<string, string>>;
 }) {
-  const { settings, toggleFavorite, renameModel } = useApp();
+  const { settings, toggleFavorite, renameModel, recordModelUsed } = useApp();
   const chipStatus = getModelStatus(model.key);
   const displayName = (settings.nicknames && settings.nicknames[model.key]) || model.label;
   const isFavorite = (settings.favoriteModelKeys || []).includes(model.key);
+  const [filter, setFilter] = useState("");
+  const [favsOpen, setFavsOpen] = useState(true);
+  const pick = (key: string) => {
+    recordModelUsed(key);
+    setModelKey(key);
+  };
   const customSection: ModelDef[] = (settings.customModels || [])
     .filter((c) => Boolean(currentProviderKey[c.provider]))
     .map((c) => ({
@@ -1239,6 +1250,26 @@ function ModelChip({
           >
           {/* Single scroll container (nested overflow + flex broke touch scroll on some Android WebViews) */}
           <div className="flex flex-col touch-pan-y overflow-y-auto overscroll-contain px-1.5 py-1.5" style={{ maxHeight: "100%" }}>
+            {/* Search/filter box */}
+            <div className="flex items-center gap-1.5 border-b border-[var(--asky-border)] px-2 pb-1.5 pt-0.5">
+              <Search size={13} className="shrink-0 text-[var(--asky-fg-muted)]" />
+              <input
+                value={filter}
+                onChange={(e) => setFilter(e.target.value)}
+                placeholder="Search models..."
+                autoFocus
+                className="w-full bg-transparent py-1.5 text-[13px] text-[var(--asky-fg)] outline-none placeholder:text-[var(--asky-fg-muted)]"
+              />
+              {filter && (
+                <button
+                  className="shrink-0 rounded-md p-0.5 text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)] hover:text-[var(--asky-fg)]"
+                  onClick={() => setFilter("")}
+                  aria-label="Clear search"
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
             {chipStatus === "rate-limited" && suggestKey && (
               <div className="flex items-center gap-2 border-b border-[var(--asky-border)] bg-red-500/10 px-3 py-2">
                 <span className="text-[12px] text-red-400">{model.label} hit its limit.</span>
@@ -1257,59 +1288,130 @@ function ModelChip({
               const favs = ALL_MODELS().filter(
                 (m) => (settings.favoriteModelKeys || []).includes(m.key),
               );
-              return favs.length > 0 ? (
-                <div key="favorites">
-                  <div className="flex items-center justify-between px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--asky-fg-muted)]">
-                    <span>Favorites</span>
-                    <span className="text-amber-400">★</span>
-                  </div>
-                  {favs.map((m) => (
-                    <ModelOptionRow
-                      key={m.key}
-                      model={m}
-                      currentModelKey={model.key}
-                      currentProviderKey={currentProviderKey}
-                      onPick={setModelKey}
-                      onDone={() => setOpen(false)}
-                    />
-                  ))}
-                </div>
-              ) : null;
+              const f = filter.trim().toLowerCase();
+              const matches = (m: { label: string; provider: string; key: string }) =>
+                !f ||
+                m.label.toLowerCase().includes(f) ||
+                PROVIDERS[m.provider as ProviderKey]?.label.toLowerCase().includes(f) ||
+                ((settings.nicknames && settings.nicknames[m.key]) || "").toLowerCase().includes(f);
+              const filteredFavs = favs.filter(matches);
+              const shownFavs = filter ? filteredFavs : filteredFavs.slice(0, favsOpen ? filteredFavs.length : 0);
+              return (
+                <>
+                  {filteredFavs.length > 0 && (
+                    <div key="favorites">
+                      <button
+                        className="flex w-full items-center justify-between px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--asky-fg-muted)] hover:text-[var(--asky-fg)]"
+                        onClick={() => {
+                          if (filter) return;
+                          setFavsOpen(!favsOpen);
+                        }}
+                        type="button"
+                      >
+                        <span className="flex items-center gap-1.5">
+                          {filter || (
+                            <ChevronsDownUp
+                              size={11}
+                              className={`transition-transform duration-150 ${favsOpen ? "" : "-rotate-90"}`}
+                            />
+                          )}
+                          <span>Favorites</span>
+                        </span>
+                        <span className="text-amber-400">★ {favs.length}</span>
+                      </button>
+                      {shownFavs.map((m) => (
+                        <ModelOptionRow
+                          key={m.key}
+                          model={m}
+                          currentModelKey={model.key}
+                          currentProviderKey={currentProviderKey}
+                          onPick={pick}
+                          onDone={() => setOpen(false)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {/* Recently used — newest first, max 6, skip duplicates elsewhere */}
+                  {!filter && (() => {
+                    const recent = (settings.lastUsedModelKeys ?? []).filter((k) => k !== model.key);
+                    if (recent.length === 0) return null;
+                    const recentDefs = recent
+                      .map((k) => ALL_MODELS().find((m) => m.key === k))
+                      .filter((m): m is ModelDef => Boolean(m) && !favs.some((x) => x.key === m!.key));
+                    if (recentDefs.length === 0) return null;
+                    return (
+                      <div key="recent">
+                        <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--asky-fg-muted)]">
+                          Recent
+                        </div>
+                        {recentDefs.map((m) => (
+                          <ModelOptionRow
+                            key={m.key}
+                            model={m}
+                            currentModelKey={model.key}
+                            currentProviderKey={currentProviderKey}
+                            onPick={pick}
+                            onDone={() => setOpen(false)}
+                          />
+                        ))}
+                      </div>
+                    );
+                  })()}
+                  {(["nvidia", "mistral", "groq", "openrouter", "opencode"] as const).map((pk) => {
+                    const rows = MODELS.filter((m) => m.provider === pk && matches(m));
+                    const visible = filter || rows.some((m) => m.key === model.key);
+                    if (rows.length === 0 && !visible) return null;
+                    return (
+                      <div key={pk}>
+                        <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--asky-fg-muted)]">
+                          {PROVIDERS[pk].label}
+                        </div>
+                        {rows.map((m) => (
+                          <ModelOptionRow
+                            key={m.key}
+                            model={m}
+                            currentModelKey={model.key}
+                            currentProviderKey={currentProviderKey}
+                            onPick={pick}
+                            onDone={() => setOpen(false)}
+                          />
+                        ))}
+                        {rows.length === 0 && visible && (
+                          <div className="px-3 py-1 text-[11px] text-[var(--asky-fg-muted)]">No matches</div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  {customSection.filter(matches).length > 0 && (
+                    <div key="custom">
+                      <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--asky-fg-muted)]">
+                        Custom models
+                      </div>
+                      {customSection.filter(matches).map((m) => (
+                        <ModelOptionRow
+                          key={m.key}
+                          model={m}
+                          currentModelKey={model.key}
+                          currentProviderKey={currentProviderKey}
+                          onPick={pick}
+                          onDone={() => setOpen(false)}
+                        />
+                      ))}
+                    </div>
+                  )}
+                  {filter &&
+                    [...filteredFavs, ...customSection].length === 0 &&
+                    !(settings.lastUsedModelKeys ?? []).some((k) =>
+                      ALL_MODELS().some((m) => m.key === k && matches(m)),
+                    ) &&
+                    !MODELS.some(matches) && (
+                      <div className="px-3 py-6 text-center text-[12px] text-[var(--asky-fg-muted)]">
+                        No models match "{filter.trim()}"
+                      </div>
+                    )}
+                </>
+              );
             })()}
-            {(["nvidia", "mistral", "groq", "openrouter", "opencode"] as const).map((pk) => (
-              <div key={pk}>
-                <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--asky-fg-muted)]">
-                  {PROVIDERS[pk].label}
-                </div>
-                {MODELS.filter((m) => m.provider === pk).map((m) => (
-                  <ModelOptionRow
-                    key={m.key}
-                    model={m}
-                    currentModelKey={model.key}
-                    currentProviderKey={currentProviderKey}
-                    onPick={setModelKey}
-                    onDone={() => setOpen(false)}
-                  />
-                ))}
-              </div>
-            ))}
-            {customSection.length > 0 && (
-              <div key="custom">
-                <div className="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-[var(--asky-fg-muted)]">
-                  Custom models
-                </div>
-                {customSection.map((m) => (
-                  <ModelOptionRow
-                    key={m.key}
-                    model={m}
-                    currentModelKey={model.key}
-                    currentProviderKey={currentProviderKey}
-                    onPick={setModelKey}
-                    onDone={() => setOpen(false)}
-                  />
-                ))}
-              </div>
-            )}
           </div>
           </div>
         </>

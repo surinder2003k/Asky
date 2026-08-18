@@ -49,6 +49,7 @@ export interface Settings {
   languagePreset?: string;
   // Batch 62
   favoriteModelKeys?: string[]; // model keys starred in picker
+  lastUsedModelKeys?: string[]; // recently used models, newest first (max 6)
   nicknames?: Record<string, string>; // model key -> custom short name
   customModels?: CustomModelDef[]; // user-added custom models
   templates?: PromptTemplate[]; // reusable prompt templates
@@ -117,6 +118,7 @@ export function loadSettings(): Settings {
     voiceLang: "en",
     pinEnabled: false,
     favoriteModelKeys: [],
+    lastUsedModelKeys: [],
     nicknames: {},
     customModels: [],
     templates: [],

@@ -204,3 +204,8 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 
 ## Batch 68 (2026-08-18) — model picker stuck scroll on mobile (user screenshot)
 - [x] Model picker touch-scroll fixed: removed the nested-overflow pattern (overflow-hidden panel + inner overflow-y-auto div broke touch scroll on Android WebView), replaced with a single touch-pan-y scroll container at 100% max-height; picker panel now overflow:visible. Same touch-pan-y fix applied to both templates dropdowns and the find bar. 109 tests pass, typecheck clean.
+
+## Batch 69 (2026-08-18) — model picker enhancements (user request)
+- [x] Model picker search box added at panel top (magnifier + clear button) — filters by model label, provider name, and nickname; shows "No models match" when empty.
+- [x] Last-used models section ("Recent", newest first, max 6) pinned between Favorites and providers; records usage on every model pick (home + in-chat) via new store.recordModelUsed stored in settings.lastUsedModelKeys; excludes current model and avoids fav duplicates.
+- [x] Favorites section collapsible: header button with chevron toggles expand/collapse (locked open while filtering) and shows ★ count; defaults expanded.
