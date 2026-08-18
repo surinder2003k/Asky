@@ -128,7 +128,7 @@ export function loadSettings(): Settings {
     temperature: 0.7,
     topP: 1,
     voiceInputEnabled: true,
-    webSearch: true,
+    webSearch: false, // ChatGPT-style: off by default — normal chat is never hijacked by search results
   });
 }
 export function saveSettings(settings: Settings) {
