@@ -25,6 +25,7 @@ import { useApp } from "../store";
 import { clearConversations } from "../storage";
 import { decodeShareString, parseSharedMessages, downloadMarkdown, downloadJson, downloadTxt, chatWordCount, buildShareUrl, exportChatToWhatsApp, exportAllChatsZip } from "../export";
 import { exportChatToPdf } from "../pdf";
+import { exportChatToWord } from "../word";
 import { downloadChatPng } from "../png";
 
 function timeAgo(ts: number) {
@@ -97,6 +98,10 @@ export default function Sidebar({
   function handleExportPdf(chatId: string) {
     const chat = chatMap.get(chatId);
     if (chat) exportChatToPdf(chat);
+  }
+  function handleExportWord(chatId: string) {
+    const chat = chatMap.get(chatId);
+    if (chat) exportChatToWord(chat);
   }
 
   function handleExportPng(chatId: string) {
@@ -274,6 +279,7 @@ export default function Sidebar({
                     onExportMd={() => handleExportMd(c.id)}
                     onExportJson={() => handleExportJson(c.id)}
                     onExportPdf={() => handleExportPdf(c.id)}
+                    onExportWord={() => handleExportWord(c.id)}
                     onExportPng={() => handleExportPng(c.id)}
                     onExportTxt={() => handleExportTxt(c.id)}
                     onExportWhatsApp={() => handleExportWhatsApp(c.id)}
@@ -311,6 +317,7 @@ export default function Sidebar({
                     onExportMd={() => handleExportMd(c.id)}
                     onExportJson={() => handleExportJson(c.id)}
                     onExportPdf={() => handleExportPdf(c.id)}
+                    onExportWord={() => handleExportWord(c.id)}
                     onExportPng={() => handleExportPng(c.id)}
                     onExportTxt={() => handleExportTxt(c.id)}
                     onExportWhatsApp={() => handleExportWhatsApp(c.id)}
@@ -349,6 +356,7 @@ export default function Sidebar({
                     onExportMd={() => handleExportMd(c.id)}
                     onExportJson={() => handleExportJson(c.id)}
                     onExportPdf={() => handleExportPdf(c.id)}
+                    onExportWord={() => handleExportWord(c.id)}
                     onExportPng={() => handleExportPng(c.id)}
                     onExportTxt={() => handleExportTxt(c.id)}
                     onExportWhatsApp={() => handleExportWhatsApp(c.id)}
@@ -502,6 +510,7 @@ function ChatRow({
   onExportMd,
   onExportJson,
   onExportPdf,
+  onExportWord,
   onExportPng,
   onExportTxt,
   onExportWhatsApp,
@@ -522,6 +531,7 @@ function ChatRow({
   onExportMd: () => void;
   onExportJson: () => void;
   onExportPdf: () => void;
+  onExportWord: () => void;
   onExportPng: () => void;
   onExportTxt: () => void;
   onExportWhatsApp: () => void;
@@ -703,6 +713,9 @@ function ChatRow({
             </button>
             <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-[var(--asky-hover)]" onClick={() => { setMenuOpen(false); onExportPdf(); }}>
               <Download size={13} /> Export .pdf
+            </button>
+            <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-[var(--asky-hover)]" onClick={() => { setMenuOpen(false); onExportWord(); }}>
+              <Download size={13} /> Export .docx
             </button>
             <button className="flex w-full items-center gap-2 px-3 py-1.5 hover:bg-[var(--asky-hover)]" onClick={() => { setMenuOpen(false); onExportPng(); }}>
               <Image size={13} /> Export .png

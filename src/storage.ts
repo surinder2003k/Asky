@@ -3,6 +3,7 @@ import type { ProviderKey } from "./providers";
 const KEY_CHATS = "asky.chats";
 const KEY_FOLDERS = "asky.folders";
 const KEY_SETTINGS = "asky.settings";
+export { KEY_CHATS, KEY_FOLDERS, KEY_SETTINGS };
 
 export interface ChatMessage {
   id: string;
@@ -59,6 +60,7 @@ export interface Settings {
   temperature?: number; // generation temperature
   topP?: number; // generation top_p
   voiceInputEnabled?: boolean; // mic in composer
+  webSearch?: boolean; // automatic web-search context before answering
 }
 
 export interface CustomModelDef {
@@ -125,6 +127,7 @@ export function loadSettings(): Settings {
     temperature: 0.7,
     topP: 1,
     voiceInputEnabled: true,
+    webSearch: true,
   });
 }
 export function saveSettings(settings: Settings) {

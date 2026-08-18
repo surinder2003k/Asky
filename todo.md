@@ -173,3 +173,12 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] Navbar/sidebar theme consistency: removed all hardcoded dark hexes (#202020/#2a2a2a/#2f2f2f) and white/x hovers in Sidebar, ChatScreen, SettingsModal, PinScreen, OfflineNotice, App.tsx — now fully theme-variable driven; light toggle applies cleanly
 - [x] Chat history auto-delete extended to 5 days (from 3); pinned chats act as archive and are kept forever (storage.ts + UI texts)
 - [x] Offline-first: public/sw.js (cache-first app shell + static assets, network-first navigation/API, cached fallback) registered in main.tsx (prod only); in-app offline banner already exists; dist build includes sw.js
+
+## Batch 64 (2026-08-18) — mobile scroll bug + new features
+- [x] Mobile scroll bug: model picker on phone gets stuck — fixed via CSS (.model-picker-panel overflow-y:auto + touch-scroll + min-height:0 inner div + overscroll-contain); backdrop z-40 doesn't trap page scroll
+- [x] Full responsive UI audit (desktop + mobile viewports verified via screenshots; home/chat screens, sidebar, settings OK)
+- [x] Web search: settings.webSearch (default true) toggle in SettingsModal; server /api/web-search (Bing scrape) + src/websearch.ts client helper prepends results to user message when enabled (skips when images attached or regenerating)
+- [x] File generation: existing Export .pdf + new "Export .docx" (src/word.ts via docx lib) in chat row menu; user can ask AI to produce a resume, download via menu
+- [x] HTML code preview: already exists — fenced html code blocks get a "Live HTML preview" bar with Run/Close, sandboxed iframe; verified in ChatScreen mountCodePreviews
+- [x] Tests (104 pass) + typecheck clean + checkpoint
+- [x] Blank screen bug: root cause = uncaught render crash (state/shape mismatch after bundle update) white-screening the whole app; added class ErrorBoundary in App.tsx with friendly recovery screen — "Reload page" + "Clear corrupted data & reload" buttons + technical details; existing storage load try/catch already defends load phase. tsc clean.

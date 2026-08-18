@@ -18,6 +18,7 @@ import { renderRichMd } from "../richMd";
 import { useApp } from "../store";
 import { ALL_MODELS, MODELS, PROVIDERS, DEFAULT_MODEL_KEY, type ModelDef, type ProviderKey } from "../providers";
 import { streamChat, type GenParams } from "../ai";
+import { webSearch, SEARCH_CONTEXT_PREFIX } from "../websearch";
 import type { ChatMessage } from "../storage";
 import { genId } from "../storage";
 import { followUpSuggestions, homeSuggestions } from "../suggestions";
@@ -324,10 +325,26 @@ export default function ChatScreen({
     ]
       .filter(Boolean)
       .join("\n\n");
+    // ── Web search context: prepend live search results to the user message.
+    let searchNote = "";
+    const wantSearch = settings.webSearch !== false;
+    if (wantSearch && text.trim() && !imageBase64 && !opts?.extraImages?.length) {
+      try {
+        const results = await webSearch(text.trim());
+        if (results.length > 0) {
+          searchNote =
+            SEARCH_CONTEXT_PREFIX +
+            results.map((r, i) => `${i + 1}. [${r.title}](${r.url}) — ${r.snippet}`).join("\n") +
+            "\n\nMy question (answer using the above): ";
+        }
+      } catch {
+        /* search failed — continue without context */
+      }
+    }
     const userMsg: ChatMessage = {
       id: editMsgId || genId("m"),
       role: "user",
-      content: text.trim(),
+      content: searchNote + text.trim(),
       image: imageBase64 || undefined,
       images: opts?.extraImages?.length ? opts.extraImages : undefined,
       replyTo: opts?.replyToMsgId,

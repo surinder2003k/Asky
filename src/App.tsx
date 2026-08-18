@@ -1,13 +1,78 @@
-import { useEffect, useRef, useState } from "react";
+import { Component, useEffect, useRef, useState, type ReactNode } from "react";
 import { PanelLeft } from "lucide-react";
 import { decodeShareString, parseSharedMessages } from "./export";
+import { KEY_CHATS, KEY_FOLDERS, KEY_SETTINGS } from "./storage";
 import { AppProvider, useApp } from "./store";
 import Sidebar from "./components/Sidebar";
 import ChatScreen from "./components/ChatScreen";
 import SettingsModal from "./components/SettingsModal";
 import PinScreen from "./components/PinScreen";
 import OfflineNotice, { useIsOffline } from "./components/OfflineNotice";
-
+/**
+ * Catches any render-time crash and shows a friendly recovery screen instead
+ * of a blank page. Also offers clearing corrupted storage state, which is a
+ * common cause of the "page turns blank while chatting" bug.
+ */
+class ErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: Error) {
+    // eslint-disable-next-line no-console
+    console.error("[Asky] render crash:", error);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-[var(--asky-bg)] p-6 text-center">
+          <div className="text-2xl">😵</div>
+          <h1 className="text-lg font-semibold text-[var(--asky-fg)]">Something went wrong</h1>
+          <p className="max-w-sm text-sm text-[var(--asky-fg-muted)]">
+            The page crashed unexpectedly (this can happen after a failed save or a corrupted cache).
+            Try recovering below — your chats are stored on this device.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            <button
+              onClick={() => window.location.reload()}
+              className="rounded-lg bg-[var(--asky-accent)] px-4 py-2 text-sm font-medium text-white"
+            >
+              Reload page
+            </button>
+            <button
+              onClick={() => {
+                const keys = [KEY_CHATS, KEY_FOLDERS, KEY_SETTINGS, "asky.status"];
+                keys.forEach((k) => {
+                  try {
+                    localStorage.removeItem(k);
+                  } catch {
+                    /* ignore */
+                  }
+                });
+                window.location.reload();
+              }}
+              className="rounded-lg border border-[var(--asky-border)] px-4 py-2 text-sm text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)]"
+            >
+              Clear corrupted data & reload
+            </button>
+          </div>
+          <details className="w-full max-w-md text-left">
+            <summary className="cursor-pointer text-xs text-[var(--asky-fg-muted)]">Technical details</summary>
+            <pre className="mt-2 max-h-40 overflow-auto rounded-lg border border-[var(--asky-border)] bg-[var(--asky-bg-input)] p-3 text-[11px] text-[var(--asky-fg-muted)]">
+              {this.state.error?.message}
+              {"\n"}
+              {this.state.error?.stack?.slice(0, 800)}
+            </pre>
+          </details>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 function Shell() {
   const { settings, importChat, newChat, isLoaded } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -101,8 +166,10 @@ function Shell() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <Shell />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <Shell />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }

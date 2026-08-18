@@ -89,6 +89,12 @@ body {
 .model-picker-panel::-webkit-scrollbar { width: 6px; }
 .model-picker-panel::-webkit-scrollbar-thumb { background: var(--asky-border); border-radius: 3px; }
 .model-picker-panel::-webkit-scrollbar-track { background: transparent; }
+.model-picker-panel {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.model-picker-panel > div { min-height: 0; }
 .model-picker-panel > div::-webkit-scrollbar { width: 6px; }
 .model-picker-panel > div::-webkit-scrollbar-thumb { background: var(--asky-border); border-radius: 3px; }
 .msg-body pre {

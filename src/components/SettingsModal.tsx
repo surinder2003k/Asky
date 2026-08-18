@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Eye, EyeOff, Keyboard, Plus, Trash2, X, Mic, Monitor } from "lucide-react";
+import { Check, Eye, EyeOff, Keyboard, Plus, Trash2, X, Mic, Monitor, Search } from "lucide-react";
 import type { CustomModelDef, Settings, PromptTemplate } from "../storage";
 import { PROVIDER_LABELS } from "../providers";
 import { useApp, hashPin } from "../store";
@@ -332,6 +332,23 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
                 />
                 <div className="mt-0.5 flex justify-between text-[10px] text-[var(--asky-fg-muted)]"><span>Focused (0)</span><span>Diverse (1)</span></div>
               </div>
+            </div>
+          </section>
+
+          {/* Web search */}
+          <section className="mb-6">
+            <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold"><Search size={14} /> Web search</h3>
+            <p className="mb-3 text-xs text-[var(--asky-fg-muted)]">On by default: before answering, Asky searches the web and uses the top results as live context. Toggle off to chat without search.</p>
+            <div className="rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg)] p-4">
+              <label className="flex cursor-pointer items-center justify-between text-sm">
+                <span>Enable web search context</span>
+                <input
+                  type="checkbox"
+                  checked={settings.webSearch !== false}
+                  onChange={(e) => updateSettings({ webSearch: e.target.checked })}
+                  className="h-4 w-4 accent-[var(--asky-accent)]"
+                />
+              </label>
             </div>
           </section>
 
