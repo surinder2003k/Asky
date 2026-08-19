@@ -30,9 +30,11 @@ HEADERS = {
 }
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Last synced snapshot tree (Batch 69) — compare against this, not remote tip.
-LAST_SYNC_TREE = "70bd813272511b79ffe042a1a33a016dcfc7fbd2"
+LAST_SYNC_TREE = "4b68187496cf0c2c4e2033acaf0806d1eab9a8a7"
 # Files to keep deleted (removed in Batch 70):
-DELETED = {"src/websearch.ts"}
+DELETED = set()  # src/websearch.ts was already removed in the base tree; deleting a nonexistent path triggers BadObjectState
+# Never push files containing real API keys (secret scanning blocks them)
+EXCLUDED = {"scripts/sanitize-for-github.py"}
 
 
 def req(method, path, payload=None, timeout=60):
@@ -74,6 +76,8 @@ def main():
     print(f"Last-synced blobs: {len(old)}")
 
     local = local_tree()
+    for d in EXCLUDED:
+        local.pop(d, None)
     # Apply deletions
     for d in DELETED:
         local.pop(d, None)
@@ -111,12 +115,13 @@ def main():
     new_tree = req("POST", "/git/trees", {"tree": entries, "base_tree": LAST_SYNC_TREE})
 
     commit = req("POST", "/git/commits", {
-        "message": "Batch 70 sync: web search removed; all latest improvements",
+        "message": "Batch 75 sync: mobile picker clamp, mobile settings sheet, friendly provider-outage errors",
         "tree": new_tree["sha"],
         "parents": [current_tip],
     })
     new_sha = commit["sha"]
     print(f"Commit {new_sha}")
+    print(f"New tree sha (use as LAST_SYNC_TREE): {new_tree['sha']}")
 
     res = req("PATCH", f"/git/refs/heads/{BRANCH}", {"sha": new_sha})
     print(f"website now at {res['object']['sha']}")

@@ -55,8 +55,8 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center overflow-y-auto bg-black/60 p-0 sm:p-6">
-      <div className="relative w-full max-w-xl bg-[var(--asky-bg-elev)] sm:rounded-2xl sm:my-8">
+    <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/60 p-0 sm:p-6">
+      <div className="relative flex h-[100dvh] w-full max-w-xl flex-col bg-[var(--asky-bg-elev)] sm:h-auto sm:rounded-2xl sm:my-8">
         <div className="flex items-center justify-between border-b border-[var(--asky-border)] px-5 py-3.5">
           <h2 className="text-lg font-semibold">Settings</h2>
           <button onClick={onClose} className="rounded-md p-1.5 hover:bg-[var(--asky-hover)]">
@@ -64,7 +64,7 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div className="max-h-[calc(100vh-8rem)] overflow-y-auto px-5 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 scrollbar-none">
           {/* API keys */}
           <section className="mb-6">
             <h3 className="mb-1 text-sm font-semibold">API Keys</h3>

@@ -1189,6 +1189,31 @@ function ModelChip({
   // changes scrollbar width/height and causes the whole page to jump/resize when the picker opens).
   // Instead the picker overlay consumes scroll events over itself while the page stays untouched.
   const pickerRef = useRef<HTMLDivElement>(null);
+  const chipRef = useRef<HTMLButtonElement>(null);
+  // Viewport-anchored positioning: the panel is centered under the chip, but clamped
+  // so it can never be cut off at the left/right edge when the chip sits near a corner
+  // (e.g. narrow mobile screens or with the sidebar open).
+  const [panelPos, setPanelPos] = useState<{ top: number; left: number } | null>(null);
+  useEffect(() => {
+    if (!open) return;
+    const place = () => {
+      const chip = chipRef.current;
+      if (!chip) return;
+      const r = chip.getBoundingClientRect();
+      const vw = document.documentElement.clientWidth;
+      const pw = 300;
+      const margin = 12;
+      // Center under the chip, then clamp so nothing is clipped off-screen.
+      let left = r.left + r.width / 2 - pw / 2;
+      if (left < margin) left = margin;
+      if (left + pw > vw - margin) left = vw - pw - margin;
+      if (left < 0) left = 0;
+      setPanelPos({ top: r.bottom + 6, left });
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     const root = pickerRef.current;
@@ -1229,6 +1254,7 @@ function ModelChip({
   return (
     <div className="relative">
       <button
+        ref={chipRef}
         onClick={() => setOpen(!open)}
         className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-sm font-medium hover:bg-[var(--asky-hover)]"
       >
@@ -1245,8 +1271,12 @@ function ModelChip({
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
             ref={pickerRef}
-            className="model-picker-panel absolute left-1/2 top-full z-50 mt-1.5 w-[300px] max-w-[calc(100vw-24px)] -translate-x-1/2 rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] shadow-2xl shadow-black/25"
-            style={{ maxHeight: "min(480px, calc(100dvh - 120px))" }}
+            className="model-picker-panel fixed z-50 w-[300px] max-w-[calc(100vw-24px)] rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] shadow-2xl shadow-black/25"
+            style={
+              panelPos
+                ? { top: `${panelPos.top}px`, left: `${panelPos.left}px`, maxHeight: "min(480px, calc(100dvh - 120px))" }
+                : { display: "none" }
+            }
           >
           {/* Single anchored scroll container with a real computed height — required for reliable touch scroll on mobile */}
           <div className="touch-pan-y overflow-y-scroll overscroll-contain px-1.5 py-1.5" style={{ height: "min(480px, calc(100dvh - 120px))" }}>

@@ -97,6 +97,13 @@ app.post("/api/chat", async (req, res) => {
       } catch {
         detail = text.slice(0, 300);
       }
+      // Empty / meaningless upstream detail → the provider likely rejects this
+      // model or is having a transient outage; say so plainly instead of a blank error.
+      if (!detail || detail.length < 8) {
+        detail = upstream.status >= 500
+          ? `the provider is temporarily unavailable (${modelId})`
+          : `this model is currently unavailable on the provider (${modelId})`;
+      }
       return res.status(upstream.status).json({
         error: { message: makeFriendlyError(providerKey, upstream.status, detail, modelId) },
       });
@@ -158,9 +165,15 @@ app.post("/api/chat", async (req, res) => {
       res.json(j);
     }
   } catch (err: any) {
-    const msg = err?.name === "TimeoutError" || String(err).includes("timed out")
-      ? "The model took too long. Try again."
-      : String(err?.message || err).slice(0, 200) || "Network request failed";
+    const raw = String(err?.message || err);
+    let msg: string;
+    if (err?.name === "TimeoutError" || /timed out/i.test(raw)) {
+      msg = "The model took too long. Try again.";
+    } else if (/fetch failed|ECONNREFUSED|socket hang up|aborted|closed/i.test(raw)) {
+      msg = `The provider cannot be reached right now for ${modelId} — try another model or check the provider status.`;
+    } else {
+      msg = raw.slice(0, 200) || "Network request failed";
+    }
     res.status(502).json({ error: { message: msg } });
   }
 });

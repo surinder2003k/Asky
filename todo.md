@@ -245,3 +245,10 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] Gemini client support: ProviderKey, PROVIDER_LABELS, PROVIDERS map, gemini-3.5-flash-lite catalog entry, streamChat gemini branch (streamGenerateContent alt=sse shape), testApiKey gemini branch, SettingsModal Get API Key entry (aistudio.google.com), SSE parser candidates[].content.parts[].text fallback
 - [x] Cleanup: removed all temp debug routes/logs; tsc clean; 109 tests pass
 - [x] GitHub website branch sync + checkpoint + deliver
+
+## Batch 75 (2026-08-19) — mobile reports from live site
+- [x] Model picker panel cut off at left edge on mobile — replaced CSS centering with JS-anchored positioning: panel centered under chip and clamped within the viewport (12px margin), never clipped even with sidebar open
+- [x] Chat area centering verified — Batch 74 already made the messages container justify-center items-center w-full (ChatGPT-like); no change needed
+- [x] "Couldn't get a reply" with Nvidia MiniMax M3 — cause found: Nvidia upstream itself closes connections for minimax-m3 + llama-3.3-70b (verified direct curl = RemoteDisconnected; same outage on live). gpt-oss-20b + glm-5.2 verified OK via proxy. Improved error UX: empty-detail 400/5xx now says "this model is currently unavailable on the provider"; fetch-failed now says "provider cannot be reached right now — try another model". Live site serves old published build ("Unknown provider" errors) until Publish button is pressed.
+- [x] Checkpoint + GitHub sync + deliver
+- [x] Settings modal on mobile — full-height mobile sheet (h-[100dvh] flex col, single inner scroll, no double scrollbar); desktop unchanged
