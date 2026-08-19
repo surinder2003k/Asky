@@ -1185,13 +1185,29 @@ function ModelChip({
     recordModelUsed(key);
     setModelKey(key);
   };
-  // Lock page scroll while the picker is open so touch scroll stays inside the picker list
+  // Keep touch scroll inside the picker list WITHOUT locking body scroll (locking the body
+  // changes scrollbar width/height and causes the whole page to jump/resize when the picker opens).
+  // Instead the picker overlay consumes scroll events over itself while the page stays untouched.
+  const pickerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const root = pickerRef.current;
+    if (!root) return;
+    const stop = (e: Event) => e.stopPropagation();
+    // Keep native touch scroll working INSIDE the picker, but prevent it leaking to the page
+    const preventPageWheel = (e: WheelEvent) => {
+      const el = e.target as HTMLElement;
+      const inside = root.contains(el);
+      if (!inside) return;
+      const atTop = el.scrollTop <= 0 && e.deltaY < 0;
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1 && e.deltaY > 0;
+      if (atTop || atBottom) e.preventDefault();
+    };
+    root.addEventListener("touchmove", stop, { passive: false });
+    root.addEventListener("wheel", preventPageWheel, { passive: false });
     return () => {
-      document.body.style.overflow = prev;
+      root.removeEventListener("touchmove", stop);
+      root.removeEventListener("wheel", preventPageWheel);
     };
   }, [open]);
   const customSection: ModelDef[] = (settings.customModels || [])
@@ -1228,6 +1244,7 @@ function ModelChip({
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
+            ref={pickerRef}
             className="model-picker-panel absolute left-0 top-full z-50 mt-1.5 w-[300px] max-w-[calc(100vw-24px)] rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] shadow-2xl shadow-black/25"
             style={{ maxHeight: "min(480px, calc(100dvh - 120px))" }}
           >

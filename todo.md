@@ -222,3 +222,8 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] Model picker keyboard fixed: removed autoFocus from the search input (keyboard no longer pops up on open; user taps the field only when they want to type) — autoComplete off, inputMode text, enterKeyHint done.
 - [x] Model list touch scroll fixed: picker now locks page scroll via document.body overflow hidden while open (scroll trapped inside the picker), and the scroll container uses a real computed height (min(480px, calc(100dvh-120px))) with overflow-y-scroll + touch-pan-y + -webkit-overflow-scrolling — reliable mobile touch scroll.
 - [x] Typecheck clean, 109 tests pass (1 skipped), dev server restarted after port conflicts, mobile viewport verified.
+
+## Batch 73 (2026-08-19) — picker layout-shift fix
+
+- [x] Model picker layout-shift fixed: removed the body scroll-lock (overflow hidden on body changed scrollbar size and made the whole page jump/resize on open/close). Now touch events are contained inside the picker panel only (touchmove stop + wheel boundary guard), so the page stays exactly where it was — no height/width jitter when opening or closing the picker.
+- [x] Typecheck clean, 109 tests pass (1 skipped).
