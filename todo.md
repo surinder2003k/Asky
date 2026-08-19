@@ -252,3 +252,8 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] "Couldn't get a reply" with Nvidia MiniMax M3 — cause found: Nvidia upstream itself closes connections for minimax-m3 + llama-3.3-70b (verified direct curl = RemoteDisconnected; same outage on live). gpt-oss-20b + glm-5.2 verified OK via proxy. Improved error UX: empty-detail 400/5xx now says "this model is currently unavailable on the provider"; fetch-failed now says "provider cannot be reached right now — try another model". Live site serves old published build ("Unknown provider" errors) until Publish button is pressed.
 - [x] Checkpoint + GitHub sync + deliver
 - [x] Settings modal on mobile — full-height mobile sheet (h-[100dvh] flex col, single inner scroll, no double scrollbar); desktop unchanged
+
+## Batch 76 (2026-08-19) — add free model from Instagram reel
+- [x] Identify the free model shown in https://www.instagram.com/p/DcJNkt5TVb8 — reel is @devzonex.dev's "DeepSeek V4 Pro Free"; free path verified on OpenCode Zen (deepseek-v4-flash-free) — deepseek-v4-pro/flash exist there too but need billing on the user's OpenCode workspace
+- [x] Add the model to the app catalog + verify E2E — added DeepSeek V4 Pro + V4 Flash to catalog (V4 Flash Free already present); total 22 models; upstream tests confirmed models reachable with user's key (free model 429 rate-limit transient, paid models 401 CreditsError = billing needed); 109 tests pass, typecheck clean
+- [ ] Checkpoint + GitHub sync + deliver

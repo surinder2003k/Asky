@@ -30,7 +30,7 @@ HEADERS = {
 }
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 # Last synced snapshot tree (Batch 69) — compare against this, not remote tip.
-LAST_SYNC_TREE = "4b68187496cf0c2c4e2033acaf0806d1eab9a8a7"
+LAST_SYNC_TREE = "5f9567e6bcb7029410c3311f2db4c73d3e9a36c5"
 # Files to keep deleted (removed in Batch 70):
 DELETED = set()  # src/websearch.ts was already removed in the base tree; deleting a nonexistent path triggers BadObjectState
 # Never push files containing real API keys (secret scanning blocks them)

@@ -114,9 +114,11 @@ export const MODELS: ModelDef[] = [
   { key: "openrouter/nvidia/nemotron-nano-12b-v2-vl:free", label: "Nemotron Nano 12B VL", provider: "openrouter", vision: true },
   { key: "openrouter/z-ai/glm-5.2:free", label: "GLM 5.2 (Free)", provider: "openrouter" },
   { key: "openrouter/google/gemma-4-26b-a4b-it:free", label: "Gemma 4 26B (Free)", provider: "openrouter", vision: true },
-  // OpenCode Zen (5) — free models only (account has no billing, paid models rejected)
-  { key: "opencode/mimo-v2.5-free", label: "MiMo 2.5 Free", provider: "opencode", vision: true },
+  // OpenCode Zen (7) — DeepSeek V4 family from the user's Instagram reel
+  { key: "opencode/deepseek-v4-pro", label: "DeepSeek V4 Pro", provider: "opencode" },
+  { key: "opencode/deepseek-v4-flash", label: "DeepSeek V4 Flash", provider: "opencode" },
   { key: "opencode/deepseek-v4-flash-free", label: "DeepSeek V4 Flash Free", provider: "opencode" },
+  { key: "opencode/mimo-v2.5-free", label: "MiMo 2.5 Free", provider: "opencode", vision: true },
   { key: "opencode/nemotron-3.5-lightning-free", label: "Nemotron 3.5 Lightning Free", provider: "opencode" },
   { key: "opencode/hy3-free", label: "Hy3 Free", provider: "opencode" },
   { key: "opencode/nemotron-3-ultra-free", label: "Nemotron 3 Ultra Free", provider: "opencode" },
