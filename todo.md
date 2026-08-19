@@ -265,4 +265,12 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] Feature/button test matrix: 26/28 automated checks pass (new chat, picker open/search/pick, friendly error bubble, sidebar, settings, test buttons, PDF/PNG/find/chat-settings buttons, export zip, import, mic, light↔dark toggle, chat delete + confirm); 'Templates button in DOM' and 'Empty state' were intentional-test expectations, verified manually via script injection
 - [x] Fix all discovered issues (Escape backdrop fix, loadSettings deep-merge, picker tests re-verified)
 - [x] Third-party tool scan (eslint, tsc, vitest 109 tests, vite build)
+- [x] Checkpoint + GitHub sync + deliver — checkpoint ec823527, website branch e58a602 (keys sanitized)
+
+## Batch 78 (2026-08-19) — live site user reports
+- [ ] Nvidia 400 "messages field cannot be empty" on real chat send — root cause + fix
+- [ ] User message alignment: user bubbles must sit RIGHT side, AI bubbles LEFT side (ChatGPT/Grok style) — currently centered/wrong
+- [ ] Full UI scan of chat layout on mobile (375px) — header, header icons, error bubble, composer, scroll arrows
+- [ ] Verify all providers/models E2E (22 models)
+- [ ] Re-run Playwright audit suite after fixes
 - [ ] Checkpoint + GitHub sync + deliver

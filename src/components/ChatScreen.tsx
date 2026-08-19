@@ -367,9 +367,13 @@ export default function ChatScreen({
     if (settings.temperature != null) params.temperature = settings.temperature;
     if (settings.topP != null) params.top_p = settings.topP;
     // AI-request payload: plain system text only — no web search, ever.
+    // The current user message MUST be part of the request (it was only in the
+    // stored history before). Without it, a brand-new chat with no custom
+    // instructions sent an empty `messages` array upstream → provider 400
+    // ("messages field cannot be empty") with no reply at all.
     const withSystem: ChatMessage[] = systemText
-      ? [{ id: genId("s"), role: "user", content: systemText, createdAt: 0 }, ...baseMessages]
-      : baseMessages;
+      ? [{ id: genId("s"), role: "user", content: systemText, createdAt: 0 }, ...baseMessages, userMsg]
+      : [...baseMessages, userMsg];
     const targetChatId = chat?.id || createChat(modelKey).id;
     if (!chat) setActiveChatId(targetChatId);
 
@@ -873,9 +877,9 @@ export default function ChatScreen({
           if (file) pickImage(file);
         }}
       >
-        <div key={`msgs-${chat?.id}`} className={`mx-auto flex w-full flex-col items-center ${settings.chatWidth === "compact" ? "max-w-2xl" : "max-w-3xl"} gap-5 px-4 py-6`}>
+        <div key={`msgs-${chat?.id}`} className={`mx-auto flex w-full flex-col items-stretch ${settings.chatWidth === "compact" ? "max-w-2xl" : "max-w-3xl"} gap-5 px-4 py-6`}>
           {!hasContent && (
-            <div className="flex flex-col items-center gap-3 pt-24">
+            <div className="flex self-center flex-col items-center gap-3 pt-24">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--asky-accent-soft)]">
                 <Sparkles size={22} className="text-[var(--asky-accent)]" />
               </div>
