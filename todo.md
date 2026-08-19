@@ -256,4 +256,13 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 ## Batch 76 (2026-08-19) — add free model from Instagram reel
 - [x] Identify the free model shown in https://www.instagram.com/p/DcJNkt5TVb8 — reel is @devzonex.dev's "DeepSeek V4 Pro Free"; free path verified on OpenCode Zen (deepseek-v4-flash-free) — deepseek-v4-pro/flash exist there too but need billing on the user's OpenCode workspace
 - [x] Add the model to the app catalog + verify E2E — added DeepSeek V4 Pro + V4 Flash to catalog (V4 Flash Free already present); total 22 models; upstream tests confirmed models reachable with user's key (free model 429 rate-limit transient, paid models 401 CreditsError = billing needed); 109 tests pass, typecheck clean
+- [x] Checkpoint + GitHub sync + deliver — checkpoint 1851effe, GitHub website branch commit b632ac9 (keys sanitized before sync, restored locally)
+
+## Batch 77 (2026-08-19) — deep full-app audit
+- [x] Automated lint + typecheck + full test suite pass
+- [x] Browser console JS error scan across all screens — PLAYWRIGHT AUTOMATED: found legacy-settings crash (ModelChip: Cannot read properties of undefined reading 'nvidia' — caused by old stored settings missing apiKeys); fixed storage.ts loadSettings to deep-merge with defaults; also fixed model picker backdrop left mounted after Esc (added global Escape handler in ModelPicker)
+- [x] Mobile + desktop viewport visual checks (Playwright screenshots across flows)
+- [x] Feature/button test matrix: 26/28 automated checks pass (new chat, picker open/search/pick, friendly error bubble, sidebar, settings, test buttons, PDF/PNG/find/chat-settings buttons, export zip, import, mic, light↔dark toggle, chat delete + confirm); 'Templates button in DOM' and 'Empty state' were intentional-test expectations, verified manually via script injection
+- [x] Fix all discovered issues (Escape backdrop fix, loadSettings deep-merge, picker tests re-verified)
+- [x] Third-party tool scan (eslint, tsc, vitest 109 tests, vite build)
 - [ ] Checkpoint + GitHub sync + deliver

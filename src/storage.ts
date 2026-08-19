@@ -109,27 +109,56 @@ export function loadFolders(): Folder[] {
 export function saveFolders(folders: Folder[]) {
   save(KEY_FOLDERS, folders);
 }
+const DEFAULT_SETTINGS: Settings = {
+  apiKeys: {},
+  theme: "dark",
+  accent: "teal",
+  voiceLang: "en",
+  pinEnabled: false,
+  favoriteModelKeys: [],
+  lastUsedModelKeys: [],
+  nicknames: {},
+  customModels: [],
+  templates: [],
+  ttsEnabled: false,
+  ttsRate: 1,
+  ttsLang: "en",
+  chatWidth: "medium",
+  fontSize: "medium",
+  temperature: 0.7,
+  topP: 1,
+  voiceInputEnabled: true,
+};
+
+/**
+ * Loads settings and deep-merges with defaults so a legacy settings object
+ * (e.g. saved by an older app version that predates `apiKeys`) can never
+ * leave `apiKeys` undefined — otherwise ModelChip and the model picker
+ * crash with "Cannot read properties of undefined".
+ */
 export function loadSettings(): Settings {
-  return load<Settings>(KEY_SETTINGS, {
-    apiKeys: {},
-    theme: "dark",
-    accent: "teal",
-    voiceLang: "en",
-    pinEnabled: false,
-    favoriteModelKeys: [],
-    lastUsedModelKeys: [],
-    nicknames: {},
-    customModels: [],
-    templates: [],
-    ttsEnabled: false,
-    ttsRate: 1,
-    ttsLang: "en",
-    chatWidth: "medium",
-    fontSize: "medium",
-    temperature: 0.7,
-    topP: 1,
-    voiceInputEnabled: true,
-  });
+  try {
+    const raw = localStorage.getItem(KEY_SETTINGS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        const p = parsed as Settings;
+        return {
+          ...DEFAULT_SETTINGS,
+          ...p,
+          apiKeys: { ...DEFAULT_SETTINGS.apiKeys, ...(p.apiKeys || {}) },
+          nicknames: { ...DEFAULT_SETTINGS.nicknames, ...(p.nicknames || {}) },
+          favoriteModelKeys: Array.isArray(p.favoriteModelKeys) ? (p.favoriteModelKeys as string[]) : [],
+          lastUsedModelKeys: Array.isArray(p.lastUsedModelKeys) ? (p.lastUsedModelKeys as string[]) : [],
+          customModels: Array.isArray(p.customModels) ? (p.customModels as CustomModelDef[]) : [],
+          templates: Array.isArray(p.templates) ? (p.templates as PromptTemplate[]) : [],
+        };
+      }
+    }
+  } catch {
+    /* fall through to defaults */
+  }
+  return { ...DEFAULT_SETTINGS };
 }
 export function saveSettings(settings: Settings) {
   save(KEY_SETTINGS, settings);

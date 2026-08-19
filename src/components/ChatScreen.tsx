@@ -1214,6 +1214,17 @@ function ModelChip({
     window.addEventListener("resize", place);
     return () => window.removeEventListener("resize", place);
   }, [open]);
+  // Global Escape handler: pressing Escape must fully close the picker AND remove the backdrop.
+  // Previously Escape only toggled `open` via the chip button when it happened to be focused, so the
+  // backdrop could be left mounted while the panel unmounted, permanently blocking pointer events.
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [open]);
   useEffect(() => {
     if (!open) return;
     const root = pickerRef.current;
