@@ -209,3 +209,7 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] Model picker search box added at panel top (magnifier + clear button) — filters by model label, provider name, and nickname; shows "No models match" when empty.
 - [x] Last-used models section ("Recent", newest first, max 6) pinned between Favorites and providers; records usage on every model pick (home + in-chat) via new store.recordModelUsed stored in settings.lastUsedModelKeys; excludes current model and avoids fav duplicates.
 - [x] Favorites section collapsible: header button with chevron toggles expand/collapse (locked open while filtering) and shows ★ count; defaults expanded.
+
+## Batch 70 (2026-08-18) — remove web search entirely (user request)
+- [x] Web search removed end-to-end: deleted server /api/web-search route, src/websearch.ts helper, websearch import + search block + hidden-context merging + sources chips in ChatScreen, webSearch section in SettingsModal, and webSearch from storage.ts Settings type/default. Chat is now plain ChatGPT-style — user messages never modified, no search context ever sent.
+- [x] Typecheck clean, 109 tests pass (1 skipped, unchanged), mobile viewport verified, checkpoint saved, GitHub website branch synced.

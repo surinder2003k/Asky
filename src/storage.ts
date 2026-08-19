@@ -62,7 +62,6 @@ export interface Settings {
   temperature?: number; // generation temperature
   topP?: number; // generation top_p
   voiceInputEnabled?: boolean; // mic in composer
-  webSearch?: boolean; // automatic web-search context before answering
 }
 
 export interface CustomModelDef {
@@ -130,7 +129,6 @@ export function loadSettings(): Settings {
     temperature: 0.7,
     topP: 1,
     voiceInputEnabled: true,
-    webSearch: false, // ChatGPT-style: off by default — normal chat is never hijacked by search results
   });
 }
 export function saveSettings(settings: Settings) {

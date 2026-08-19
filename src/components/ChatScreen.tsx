@@ -18,7 +18,6 @@ import { renderRichMd } from "../richMd";
 import { useApp } from "../store";
 import { ALL_MODELS, MODELS, PROVIDERS, DEFAULT_MODEL_KEY, type ModelDef, type ProviderKey } from "../providers";
 import { streamChat, type GenParams } from "../ai";
-import { webSearch, SEARCH_CONTEXT_PREFIX } from "../websearch";
 import type { ChatMessage } from "../storage";
 import { genId } from "../storage";
 import { followUpSuggestions, homeSuggestions } from "../suggestions";
@@ -344,26 +343,6 @@ export default function ChatScreen({
     ]
       .filter(Boolean)
       .join("\n\n");
-    // ── Web search context (ChatGPT-style): search results are sent as HIDDEN
-    // context attached to the AI request — they NEVER appear inside the visible
-    // user bubble. The user's own text stays exactly as typed.
-    let searchContext = "";
-    let capturedResults: { title: string; url: string }[] | undefined;
-    const wantSearch = settings.webSearch === true;
-    if (wantSearch && text.trim() && !imageBase64 && !opts?.extraImages?.length) {
-      try {
-        const results = await webSearch(text.trim());
-        if (results.length > 0) {
-          capturedResults = results.map((r) => ({ title: r.title, url: r.url }));
-          searchContext =
-            SEARCH_CONTEXT_PREFIX +
-            results.map((r, i) => `${i + 1}. [${r.title}](${r.url}) — ${r.snippet}`).join("\n") +
-            "\n\nAnswer the question below using the above context:\n";
-        }
-      } catch {
-        /* search failed — continue without context */
-      }
-    }
     const userMsg: ChatMessage = {
       id: editMsgId || genId("m"),
       role: "user",
@@ -387,13 +366,9 @@ export default function ChatScreen({
     const params: GenParams = {};
     if (settings.temperature != null) params.temperature = settings.temperature;
     if (settings.topP != null) params.top_p = settings.topP;
-    // AI-request payload: include system text AND (if any) web-search context as
-    // hidden context — baseMessages stays clean for storage; searchContext is
-    // appended invisibly so the assistant sees the results but the user bubble
-    // never shows "I searched the web…".
-    const hiddenContext = searchContext ? systemText ? `${systemText}\n\n${searchContext}` : searchContext : systemText;
-    const withSystem: ChatMessage[] = hiddenContext
-      ? [{ id: genId("s"), role: "user", content: hiddenContext, createdAt: 0 }, ...baseMessages]
+    // AI-request payload: plain system text only — no web search, ever.
+    const withSystem: ChatMessage[] = systemText
+      ? [{ id: genId("s"), role: "user", content: systemText, createdAt: 0 }, ...baseMessages]
       : baseMessages;
     const targetChatId = chat?.id || createChat(modelKey).id;
     if (!chat) setActiveChatId(targetChatId);
@@ -405,7 +380,6 @@ export default function ChatScreen({
       content: "",
       reasoning: "",
       done: false,
-      sources: capturedResults,
       createdAt: Date.now(),
     };
     const withUser = [...baseMessages, userMsg, assistantMsg];
@@ -1718,23 +1692,6 @@ function MessageRow({
                   onClick={() => onOpenViewer?.(src)}
                   className="max-h-28 cursor-pointer rounded-lg border border-[var(--asky-border)] hover:opacity-90"
                 />
-              ))}
-            </div>
-          )}
-          {(msg.sources || []).length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {msg.sources!.map((s, i) => (
-                <a
-                  key={i}
-                  href={s.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex max-w-[160px] items-center gap-1 truncate rounded-md border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] px-2 py-1 text-[11px] text-[var(--asky-accent)] hover:opacity-80"
-                  title={s.title}
-                >
-                  <span className="flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full bg-[var(--asky-accent-soft)] text-[9px] font-semibold">{i + 1}</span>
-                  <span className="truncate">{s.title}</span>
-                </a>
               ))}
             </div>
           )}

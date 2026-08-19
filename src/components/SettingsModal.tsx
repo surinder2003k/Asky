@@ -335,23 +335,6 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
             </div>
           </section>
 
-          {/* Web search */}
-          <section className="mb-6">
-            <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold"><Search size={14} /> Web search</h3>
-            <p className="mb-3 text-xs text-[var(--asky-fg-muted)]">On by default: before answering, Asky searches the web and uses the top results as live context. Toggle off to chat without search.</p>
-            <div className="rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg)] p-4">
-              <label className="flex cursor-pointer items-center justify-between text-sm">
-                <span>Enable web search context</span>
-                <input
-                  type="checkbox"
-                  checked={settings.webSearch !== false}
-                  onChange={(e) => updateSettings({ webSearch: e.target.checked })}
-                  className="h-4 w-4 accent-[var(--asky-accent)]"
-                />
-              </label>
-            </div>
-          </section>
-
           {/* Voice reply (TTS) */}
           <section className="mb-6">
             <h3 className="mb-1 flex items-center gap-2 text-sm font-semibold"><Mic size={14} /> Voice reply (TTS)</h3>
