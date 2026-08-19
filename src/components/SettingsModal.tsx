@@ -20,6 +20,7 @@ const PROVIDER_META: { key: ProviderKey; label: string; envHint: string; getApiU
   { key: "mistral", label: "Mistral", envHint: "console.mistral.ai", getApiUrl: "https://console.mistral.ai/api-keys/" },
   { key: "groq", label: "Groq", envHint: "console.groq.com", getApiUrl: "https://console.groq.com/keys" },
   { key: "openrouter", label: "OpenRouter", envHint: "openrouter.ai", getApiUrl: "https://openrouter.ai/keys" },
+  { key: "gemini", label: "Gemini", envHint: "aistudio.google.com", getApiUrl: "https://aistudio.google.com/app/apikey" },
 ];
 
 export default function SettingsModal({ onClose }: { onClose: () => void }) {

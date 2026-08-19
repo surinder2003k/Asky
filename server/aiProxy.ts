@@ -68,8 +68,15 @@ export function handleChat(req: Request, res: Response): void | Promise<void> {
       headers["X-Title"] = "Asky";
     }
 
+    // BUG FIX (2026-08-19): the previous code passed the client `body` (which
+    // has NO `model` field) as the actual request body and only used the
+    // merged `{...body, model: modelId}` object as the X-Request-Body echo
+    // header — so providers always received a payload WITHOUT `model` and
+    // rejected it with "model field is required". Now the merged payload is
+    // the real request body.
+    const upstreamBody = { ...(body ?? {}), model: modelId };
     console.log(`[aiProxy] chat provider=${providerKey} modelId=${modelId}`);
-    await streamRelay(res, url, "POST", providerKey, headers, body, { ...body, model: modelId });
+    await streamRelay(res, url, "POST", providerKey, headers, upstreamBody, upstreamBody);
   })();
 }
 
@@ -177,29 +184,54 @@ async function streamRelay(
       return;
     }
     const reader = upstream.body.getReader();
-    const pump = async (): Promise<void> => {
+    // Client-disconnect handler: when the browser aborts (stop button, tab
+    // close), cancel the upstream reader so the provider request does not
+    // keep running and the pump stops cleanly.
+    res.on("close", () => reader.cancel().catch(() => {}));
+    // Per-stream inactivity watchdog: providers occasionally stall mid-stream
+    // (cold start, internal buffering). Without it a stalled upstream leaves
+    // the client hanging on a blinking cursor forever. 30s of silence cancels
+    // the upstream and closes the stream so the client's error flow runs.
+    let idleTimer: ReturnType<typeof setTimeout> | undefined;
+    const resetIdle = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        clearTimeout(idleTimer);
+        reader.cancel().catch(() => {});
+        try {
+          res.end();
+        } catch {
+          // response already finished
+        }
+      }, 30000);
+    };
+    await (async () => {
       try {
+        resetIdle();
         while (true) {
           const { done, value } = await reader.read();
           if (done) {
+            clearTimeout(idleTimer);
             res.end();
             return;
           }
+          resetIdle();
           if (!res.write(value)) {
+            clearTimeout(idleTimer);
             reader.cancel();
             res.end();
             return;
           }
         }
       } catch {
+        clearTimeout(idleTimer);
         try {
           res.end();
         } catch {
           // response already finished
         }
       }
-    };
-    await pump();
+    })();
   } catch (e) {
     clearTimeout(timer);
     try {

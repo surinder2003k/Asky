@@ -85,20 +85,16 @@ body {
   background: var(--asky-hover2);
 }
 
-/* Model picker panel: slim themed scrollbar, smooth scrolling */
-.model-picker-panel::-webkit-scrollbar { width: 6px; }
-.model-picker-panel::-webkit-scrollbar-thumb { background: var(--asky-border); border-radius: 3px; }
-.model-picker-panel::-webkit-scrollbar-track { background: transparent; }
-.model-picker-panel {
-  overflow: visible;
-  -webkit-overflow-scrolling: touch;
-}
+/* Model picker panel: fully hidden scrollbar (no visible scroller bar), smooth touch scrolling */
+.model-picker-panel { scrollbar-width: none; -ms-overflow-style: none; overflow: visible; -webkit-overflow-scrolling: touch; }
+.model-picker-panel::-webkit-scrollbar { display: none; }
 .model-picker-panel .touch-pan-y {
   height: min(480px, calc(100dvh - 120px));
   -webkit-overflow-scrolling: touch;
 }
 .model-picker-panel > div { min-height: 0; }
-.model-picker-panel > div::-webkit-scrollbar { width: 6px; }
+.model-picker-panel > div { scrollbar-width: none; }
+.model-picker-panel > div::-webkit-scrollbar { display: none; }
 .model-picker-panel > div::-webkit-scrollbar-thumb { background: var(--asky-border); border-radius: 3px; }
 .msg-body pre {
   background: var(--asky-code-bg);

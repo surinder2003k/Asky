@@ -873,7 +873,7 @@ export default function ChatScreen({
           if (file) pickImage(file);
         }}
       >
-        <div key={`msgs-${chat?.id}`} className={`mx-auto flex ${settings.chatWidth === "compact" ? "max-w-2xl" : "max-w-3xl"} gap-5 px-4 py-6`}>
+        <div key={`msgs-${chat?.id}`} className={`mx-auto flex w-full flex-col items-center ${settings.chatWidth === "compact" ? "max-w-2xl" : "max-w-3xl"} gap-5 px-4 py-6`}>
           {!hasContent && (
             <div className="flex flex-col items-center gap-3 pt-24">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--asky-accent-soft)]">
@@ -1245,7 +1245,7 @@ function ModelChip({
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
           <div
             ref={pickerRef}
-            className="model-picker-panel absolute left-0 top-full z-50 mt-1.5 w-[300px] max-w-[calc(100vw-24px)] rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] shadow-2xl shadow-black/25"
+            className="model-picker-panel absolute left-1/2 top-full z-50 mt-1.5 w-[300px] max-w-[calc(100vw-24px)] -translate-x-1/2 rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] shadow-2xl shadow-black/25"
             style={{ maxHeight: "min(480px, calc(100dvh - 120px))" }}
           >
           {/* Single anchored scroll container with a real computed height — required for reliable touch scroll on mobile */}

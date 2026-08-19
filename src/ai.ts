@@ -62,33 +62,61 @@ export function streamChat(
     return;
   }
   void import("./providers").then(() => {}).catch(() => {});
-  const payload = {
-    providerKey,
-    apiKey,
-    modelId: resolveModelId(model),
-    body: {
-      model: resolveModelId(model),
-      messages: cleanHistory(messages).map((m) => {
-        if (m.role === "user") {
-          const allImages = [m.image, ...(m.images ?? [])].filter(Boolean);
-          if (allImages.length) {
-            return {
-              role: "user",
-              content: [
-                { type: "text", text: m.content || (allImages.length > 1 ? "Describe these images" : "Describe this image") },
-                ...allImages.map((img) => ({ type: "image_url", image_url: { url: img } })),
-              ],
-            };
+  const modelId = resolveModelId(model);
+
+  let payload: Record<string, unknown>;
+  if (providerKey === "gemini") {
+    // Gemini uses Google's streamGenerateContent shape (alt=sse), not the
+    // OpenAI chat/completions shape. The server's gemini branch expects
+    // { gemini: { modelId, body } }.
+    payload = {
+      providerKey,
+      apiKey,
+      modelId,
+      gemini: {
+        modelId,
+        body: {
+          contents: cleanHistory(messages).map((m) => ({
+            role: m.role === "assistant" ? "model" : "user",
+            parts: [{ text: m.content || (m.image ? "Describe this image" : "") }],
+          })),
+          generationConfig: {
+            maxOutputTokens: 2048,
+            ...(opts.params?.temperature != null ? { temperature: opts.params.temperature } : {}),
+            ...(opts.params?.top_p != null ? { topP: opts.params.top_p } : {}),
+          },
+        },
+      },
+    };
+  } else {
+    payload = {
+      providerKey,
+      apiKey,
+      modelId,
+      body: {
+        model: modelId,
+        messages: cleanHistory(messages).map((m) => {
+          if (m.role === "user") {
+            const allImages = [m.image, ...(m.images ?? [])].filter(Boolean);
+            if (allImages.length) {
+              return {
+                role: "user",
+                content: [
+                  { type: "text", text: m.content || (allImages.length > 1 ? "Describe these images" : "Describe this image") },
+                  ...allImages.map((img) => ({ type: "image_url", image_url: { url: img } })),
+                ],
+              };
+            }
           }
-        }
-        return { role: m.role, content: m.content };
-      }),
-      stream: true,
-      max_tokens: 2048,
-      ...(opts.params?.temperature != null ? { temperature: opts.params.temperature } : {}),
-      ...(opts.params?.top_p != null ? { top_p: opts.params.top_p } : {}),
-    },
-  };
+          return { role: m.role, content: m.content };
+        }),
+        stream: true,
+        max_tokens: 2048,
+        ...(opts.params?.temperature != null ? { temperature: opts.params.temperature } : {}),
+        ...(opts.params?.top_p != null ? { top_p: opts.params.top_p } : {}),
+      },
+    };
+  }
   void modelKey;
 
   fetch("/api/chat", {
@@ -153,7 +181,14 @@ export function streamChat(
               continue;
             }
             const delta = ev?.choices?.[0]?.delta;
-            if (!delta) continue;
+            if (!delta) {
+              // Gemini's streamGenerateContent emits candidates instead of choices
+              const candText = ev?.candidates?.[0]?.content?.parts?.[0]?.text;
+              if (!candText) continue;
+              started = true;
+              cb.onDelta(candText);
+              continue;
+            }
             started = true;
             const content = delta.content ?? "";
             if (content) cb.onDelta(content);
@@ -206,21 +241,32 @@ export async function testApiKey(
           ? "openai/gpt-oss-120b"
           : providerKey === "openrouter"
             ? "nvidia/nemotron-3-nano-30b-a3b:free"
-            : "mimo-v2.5-free";
+            : providerKey === "gemini"
+              ? "gemini-3.5-flash-lite"
+              : "mimo-v2.5-free";
+  const geminiBody =
+    providerKey === "gemini"
+      ? {
+          gemini: {
+            modelId,
+            body: {
+              contents: [{ role: "user", parts: [{ text: "Say OK" }] }],
+              generationConfig: { maxOutputTokens: 5 },
+            },
+          },
+        }
+      : {
+          body: {
+            model: modelId,
+            messages: [{ role: "user", content: "Say OK" }],
+            stream: false,
+            max_tokens: 5,
+          },
+        };
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      providerKey,
-      apiKey,
-      modelId,
-      body: {
-        model: modelId,
-        messages: [{ role: "user", content: "Say OK" }],
-        stream: false,
-        max_tokens: 5,
-      },
-    }),
+    body: JSON.stringify({ providerKey, apiKey, modelId, ...geminiBody }),
   });
   if (!res.ok) {
     let detail = "";

@@ -20,15 +20,16 @@ app.use((req, res, next) => {
 interface ProviderInfo {
   url: string;
   header: string;
-  bare?: boolean;
 }
 
 const PROVIDERS: Record<string, ProviderInfo> = {
   nvidia: { url: "https://integrate.api.nvidia.com/v1", header: "Authorization" },
-  mistral: { url: "https://api.mistral.ai/v1", header: "Authorization", bare: true },
-  groq: { url: "https://api.groq.com/openai/v1", header: "Authorization", bare: true },
+  mistral: { url: "https://api.mistral.ai/v1", header: "Authorization" },
+  groq: { url: "https://api.groq.com/openai/v1", header: "Authorization" },
   openrouter: { url: "https://openrouter.ai/api/v1", header: "Authorization" },
-  opencode: { url: "https://opencode.ai/zen/v1", header: "Authorization", bare: true },
+  opencode: { url: "https://opencode.ai/zen/v1", header: "Authorization" },
+  opencode_zen: { url: "https://opencode.ai/zen/v1", header: "Authorization" },
+  gemini: { url: "https://generativelanguage.googleapis.com/v1beta", header: "Authorization" },
 };
 
 // Open-source site: NO built-in keys — users bring their own API keys.
@@ -41,7 +42,7 @@ function pickKey(providerKey: string, userKey?: string): string {
 const TIMEOUT = 90000;
 
 app.post("/api/chat", async (req, res) => {
-  const { providerKey, apiKey, modelId, body } = req.body || {};
+  const { providerKey, apiKey, modelId, body, gemini } = req.body || {};
   const provider = PROVIDERS[providerKey];
   if (!provider) return res.status(400).json({ error: { message: "Unknown provider" } });
   const key = pickKey(providerKey, apiKey);
@@ -50,21 +51,39 @@ app.post("/api/chat", async (req, res) => {
       error: { message: "No API key for this provider. Add it in Settings → API Keys." },
     });
 
-  const targetUrl = `${provider.url}/chat/completions`;
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    [provider.header]: provider.bare ? key : `Bearer ${key}`,
-  };
-  if (providerKey === "openrouter") {
-    headers["HTTP-Referer"] = "https://asky.manus.space";
-    headers["X-Title"] = "Asky";
+  // Gemini uses its own REST endpoint shape (handled via its own branch below).
+  let targetUrl: string;
+  let headers: Record<string, string>;
+  let upstreamBody: unknown;
+  let isGemini = false;
+
+  if (providerKey === "gemini" && gemini) {
+    isGemini = true;
+    targetUrl = `${PROVIDERS.gemini.url}/models/${gemini.modelId}:streamGenerateContent?key=${encodeURIComponent(key)}&alt=sse`;
+    headers = { "Content-Type": "application/json" };
+    upstreamBody = gemini.body;
+  } else {
+    targetUrl = `${provider.url}/chat/completions`;
+    headers = {
+      "Content-Type": "application/json",
+      [provider.header]: `Bearer ${key}`,
+    };
+    if (providerKey === "openrouter") {
+      headers["HTTP-Referer"] = "https://asky.manus.space";
+      headers["X-Title"] = "Asky";
+    }
+    // CRITICAL: the client sends `body` = { messages, stream, ... } WITHOUT the
+    // `model` field. Providers reject any chat request missing `model`, so it
+    // MUST be merged into the payload sent upstream (was previously missing —
+    // the classic "model field is required" 400).
+    upstreamBody = { ...(body ?? {}), model: modelId };
   }
 
   try {
     const upstream = await fetch(targetUrl, {
       method: "POST",
       headers,
-      body: JSON.stringify(body),
+      body: JSON.stringify(upstreamBody),
       signal: AbortSignal.timeout(TIMEOUT),
     });
 
@@ -93,18 +112,47 @@ app.post("/api/chat", async (req, res) => {
       const decoder = new TextDecoder();
       let buffer = "";
       res.on("close", () => reader.cancel().catch(() => {}));
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) {
-          res.write(line + "\n");
+      // Inactivity watchdog: some providers (e.g. Nvidia mini models) keep the
+      // connection open but stop sending chunks and never emit [DONE]. Without
+      // this, the client cursor blinks forever. 30s of silence cancels the
+      // upstream and closes the stream so the client finalizes.
+      let idleTimer: ReturnType<typeof setTimeout> | undefined;
+      const resetIdle = () => {
+        clearTimeout(idleTimer);
+        idleTimer = setTimeout(() => {
+          clearTimeout(idleTimer);
+          reader.cancel().catch(() => {});
+          try {
+            res.end();
+          } catch {
+            // response already finished
+          }
+        }, 30000);
+      };
+      try {
+        resetIdle();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          resetIdle();
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() ?? "";
+          for (const line of lines) {
+            res.write(line + "\n");
+          }
+        }
+        clearTimeout(idleTimer);
+        res.write("data: [DONE]\n\n");
+        res.end();
+      } catch {
+        clearTimeout(idleTimer);
+        try {
+          res.end();
+        } catch {
+          // response already finished
         }
       }
-      res.write("data: [DONE]\n\n");
-      res.end();
     } else {
       const j = await upstream.json();
       res.json(j);
@@ -116,6 +164,7 @@ app.post("/api/chat", async (req, res) => {
     res.status(502).json({ error: { message: msg } });
   }
 });
+
 
 // ── Serve the static web app in production
 if (isProd) {

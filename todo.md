@@ -227,3 +227,21 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 
 - [x] Model picker layout-shift fixed: removed the body scroll-lock (overflow hidden on body changed scrollbar size and made the whole page jump/resize on open/close). Now touch events are contained inside the picker panel only (touchmove stop + wheel boundary guard), so the page stays exactly where it was — no height/width jitter when opening or closing the picker.
 - [x] Typecheck clean, 109 tests pass (1 skipped).
+
+## Batch 74 (2026-08-19) — picker UI polish + no-response diagnosis
+
+- [x] Model picker scrollbar hidden: scrollbar-width:none + ::-webkit-scrollbar display:none on panel and inner div; touch scroll still works.
+- [x] Picker centered horizontally below chip (left-1/2 -translate-x-1/2) so key set / add key status is never cut off at the corner.
+- [x] Chat column centering fixed: messages flex container uses justify-center items-center w-full so bubbles sit in the centered column on mobile and desktop.
+- [ ] NVIDIA-selected model gives no response (streaming hangs) — diagnose aiProxy streaming for all providers and fix
+- [ ] Deep scan: test all providers/models work; checkpoint + GitHub sync
+
+## Batch 74 (2026-08-19) — provider backend fixes
+- [x] CRITICAL: model field missing bug — server sent client body WITHOUT model to upstream ("model field is required" 400 on Nvidia etc.); merged model into upstreamBody
+- [x] CRITICAL: bearer auth fix — groq/mistral/opencode sent bare keys (401 Invalid API Key); all providers now Bearer prefix; bare field removed
+- [x] Streaming hang fix — 30s idle watchdog + close handler in server SSE pump ([DONE] injected so client completes gracefully)
+- [x] E2E verified: nvidia llama-3.1-8b ✅, mistral small ✅, groq gpt-oss-120b ✅, openrouter nemotron ✅, opencode mimo ✅
+- [x] Nvidia 3.2 (stalling model) ends cleanly via watchdog instead of infinite cursor
+- [x] Gemini client support: ProviderKey, PROVIDER_LABELS, PROVIDERS map, gemini-3.5-flash-lite catalog entry, streamChat gemini branch (streamGenerateContent alt=sse shape), testApiKey gemini branch, SettingsModal Get API Key entry (aistudio.google.com), SSE parser candidates[].content.parts[].text fallback
+- [x] Cleanup: removed all temp debug routes/logs; tsc clean; 109 tests pass
+- [x] GitHub website branch sync + checkpoint + deliver

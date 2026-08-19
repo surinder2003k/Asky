@@ -23,15 +23,16 @@ function mockLocalStorage(): void {
 }
 
 describe("providers", () => {
-  it("has 19 verified free-tier models across 5 providers", () => {
-    expect(MODELS.length).toBe(19);
+  it("has 20 verified free-tier models across 6 providers", () => {
+    expect(MODELS.length).toBe(20);
     const keys = new Set(MODELS.map((m) => m.provider));
-    expect(keys.size).toBe(5);
+    expect(keys.size).toBe(6);
     expect(keys.has("nvidia")).toBe(true);
     expect(keys.has("mistral")).toBe(true);
     expect(keys.has("groq")).toBe(true);
     expect(keys.has("openrouter")).toBe(true);
     expect(keys.has("opencode")).toBe(true);
+    expect(keys.has("gemini")).toBe(true);
   });
 
   it("every model has unique key", () => {

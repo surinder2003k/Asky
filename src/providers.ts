@@ -9,9 +9,10 @@ export const PROVIDER_LABELS: Record<ProviderKey, string> = {
   groq: "Groq",
   openrouter: "OpenRouter",
   opencode: "OpenCode Zen",
+  gemini: "Gemini",
 };
 
-export type ProviderKey = "nvidia" | "mistral" | "groq" | "openrouter" | "opencode";
+export type ProviderKey = "nvidia" | "mistral" | "groq" | "openrouter" | "opencode" | "gemini";
 
 export interface ModelDef {
   key: string;
@@ -81,6 +82,14 @@ export const PROVIDERS: Record<
     modelPrefix: "opencode/",
     bareId: true,
   },
+  gemini: {
+    label: "Gemini",
+    url: "https://generativelanguage.googleapis.com/v1beta",
+    header: "Authorization",
+    envKey: "",
+    hasBuiltInKey: false,
+    modelPrefix: "gemini/",
+  },
 };
 
 // Live-verified slugs.
@@ -111,6 +120,8 @@ export const MODELS: ModelDef[] = [
   { key: "opencode/nemotron-3.5-lightning-free", label: "Nemotron 3.5 Lightning Free", provider: "opencode" },
   { key: "opencode/hy3-free", label: "Hy3 Free", provider: "opencode" },
   { key: "opencode/nemotron-3-ultra-free", label: "Nemotron 3 Ultra Free", provider: "opencode" },
+  // Gemini — Google AI Studio free-tier models (vision-capable)
+  { key: "gemini/gemini-3.5-flash-lite", label: "Gemini 3.5 Flash Lite", provider: "gemini", vision: true },
 ];
 
 /** Map provider-specific model key → id sent to the API */
