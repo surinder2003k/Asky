@@ -55,8 +55,8 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-start justify-center bg-black/60 p-0 sm:p-6">
-      <div className="relative flex h-[100dvh] w-full max-w-xl flex-col bg-[var(--asky-bg-elev)] sm:h-auto sm:rounded-2xl sm:my-8">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/60 p-0 sm:p-6">
+      <div className="relative flex h-[100dvh] w-full max-w-xl flex-col overflow-hidden bg-[var(--asky-bg-elev)] sm:h-auto sm:max-h-[min(calc(100dvh-48px),720px)] sm:my-8 sm:rounded-2xl">
         <div className="flex items-center justify-between border-b border-[var(--asky-border)] px-5 py-3.5">
           <h2 className="text-lg font-semibold">Settings</h2>
           <button onClick={onClose} className="rounded-md p-1.5 hover:bg-[var(--asky-hover)]">

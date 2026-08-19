@@ -287,3 +287,12 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] UI visual verification: screenshots of all key screens on mobile (375px) + desktop — alignment, picker, settings sheet, sidebar, chat layout, composer, error bubbles
 - [x] Third-party tool scan: eslint + tsc + vite build + Playwright automated console-error scan
 - [ ] Report results to user
+
+## Batch 80 (2026-08-19) — laptop scroll fixes + model free/vision verification
+- [x] Reproduce laptop Settings modal scroll stuck — root cause: at sm+ the dialog used sm:h-auto with no height cap, growing taller than the viewport so inner overflow never scrolled. Fixed: dialog max-h-[min(calc(100dvh-48px),720px)] + overflow-hidden, inner overflow-y-auto. Verified desktop & mobile scrollTop moves (2188px desktop).
+- [x] Reproduce model picker scroll stuck — root cause: blind stopPropagation on touchmove blocked native inner scrolling. Fixed: boundary-aware onTouchMove/onWheel (prevent only at top/bottom), touch-pan-y scroll container. Verified desktop wheel top→bottom→top and mobile touch swipe via CDP.
+- [x] Fix SettingsModal scroll (desktop + mobile verified)
+- [x] Fix ModelPicker list scroll (desktop wheel + mobile swipe verified)
+- [x] Verify catalog FREE only — live-tested opencode deepseek-v4-pro & deepseek-v4-flash return 401 (paid-only) on free key → REMOVED. Catalog now 20 free-only models across 6 providers (DeepSeek V4 Flash Free kept; works).
+- [x] Vision flags live-verified with real red-square PNG: Nemotron Nano VL 8B (Red OK), Nemotron Nano 12B VL:free (Red OK), MiMo 2.5 Free (Red OK), Gemma 4 26B:free (Red OK); GLM 5.2 answered 'Unknown' → NOT vision-flagged; Gemini 3.5 Flash Lite 403 (user's Google key permission — needs new key); minimax-m3 flagged vision per Nvidia catalogue but Nvidia's server is down for it (provider outage).
+- [ ] Checkpoint + GitHub sync + deliver

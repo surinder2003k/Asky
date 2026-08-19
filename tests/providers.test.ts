@@ -23,11 +23,12 @@ function mockLocalStorage(): void {
 }
 
 describe("providers", () => {
-  it("has 22 verified models across 6 providers including the DeepSeek V4 family", () => {
-    expect(MODELS.length).toBe(22);
-    for (const k of ["opencode/deepseek-v4-pro", "opencode/deepseek-v4-flash", "opencode/deepseek-v4-flash-free"]) {
-      expect(getModel(k)).toBeTruthy();
-    }
+  it("has 20 free-only verified models across 6 providers including DeepSeek V4 Flash Free", () => {
+    expect(MODELS.length).toBe(20);
+    // paid-only models (401 on the free key, live-tested) were removed:
+    expect(getModel("opencode/deepseek-v4-pro")).toBeUndefined();
+    expect(getModel("opencode/deepseek-v4-flash")).toBeUndefined();
+    expect(getModel("opencode/deepseek-v4-flash-free")).toBeTruthy();
     const keys = new Set(MODELS.map((m) => m.provider));
     expect(keys.size).toBe(6);
     expect(keys.has("nvidia")).toBe(true);

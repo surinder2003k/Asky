@@ -99,6 +99,7 @@ export const MODELS: ModelDef[] = [
   // Nvidia (5)
   { key: "z-ai/glm-5.2", label: "GLM 5.2", provider: "nvidia" },
   { key: "openai/gpt-oss-20b", label: "GPT-OSS 20B", provider: "nvidia" },
+  // MiniMax M3: catalogue says vision-capable but Nvidia's server is currently DOWN for this model (502, provider outage — not an app bug).
   { key: "minimaxai/minimax-m3", label: "MiniMax M3", provider: "nvidia", vision: true },
   { key: "nvidia/llama-3.1-nemotron-nano-vl-8b-v1", label: "Nemotron Nano VL 8B", provider: "nvidia", vision: true, keepPrefix: true },
   { key: "meta/llama-3.3-70b-instruct", label: "Llama 3.3 70B", provider: "nvidia" },
@@ -114,9 +115,8 @@ export const MODELS: ModelDef[] = [
   { key: "openrouter/nvidia/nemotron-nano-12b-v2-vl:free", label: "Nemotron Nano 12B VL", provider: "openrouter", vision: true },
   { key: "openrouter/z-ai/glm-5.2:free", label: "GLM 5.2 (Free)", provider: "openrouter" },
   { key: "openrouter/google/gemma-4-26b-a4b-it:free", label: "Gemma 4 26B (Free)", provider: "openrouter", vision: true },
-  // OpenCode Zen (7) — DeepSeek V4 family from the user's Instagram reel
-  { key: "opencode/deepseek-v4-pro", label: "DeepSeek V4 Pro", provider: "opencode" },
-  { key: "opencode/deepseek-v4-flash", label: "DeepSeek V4 Flash", provider: "opencode" },
+  // OpenCode Zen (5) — DeepSeek V4 family from the user's Instagram reel.
+  // deepseek-v4-pro & deepseek-v4-flash removed: paid-only, return 401 on the free key (live-tested 2026-08-19).
   { key: "opencode/deepseek-v4-flash-free", label: "DeepSeek V4 Flash Free", provider: "opencode" },
   { key: "opencode/mimo-v2.5-free", label: "MiMo 2.5 Free", provider: "opencode", vision: true },
   { key: "opencode/nemotron-3.5-lightning-free", label: "Nemotron 3.5 Lightning Free", provider: "opencode" },

@@ -1233,21 +1233,56 @@ function ModelChip({
     if (!open) return;
     const root = pickerRef.current;
     if (!root) return;
-    const stop = (e: Event) => e.stopPropagation();
-    // Keep native touch scroll working INSIDE the picker, but prevent it leaking to the page
-    const preventPageWheel = (e: WheelEvent) => {
-      const el = e.target as HTMLElement;
-      const inside = root.contains(el);
-      if (!inside) return;
-      const atTop = el.scrollTop <= 0 && e.deltaY < 0;
-      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 1 && e.deltaY > 0;
-      if (atTop || atBottom) e.preventDefault();
+    // Locate the scrollable inner list inside the panel — this element must keep receiving
+    // native scroll on BOTH touch (laptop touchpads + phones) and mouse-wheel input.
+    const findScrollable = (target: HTMLElement | null): HTMLElement | null => {
+      let el = target;
+      while (el && el !== root) {
+        if (el.scrollHeight > el.clientHeight + 2 && getComputedStyle(el).overflowY !== "visible") return el;
+        el = el.parentElement;
+      }
+      return null;
     };
-    root.addEventListener("touchmove", stop, { passive: false });
-    root.addEventListener("wheel", preventPageWheel, { passive: false });
+    // Touch scroll: allow it INSIDE the picker, consume only when it would leak to the page.
+    // The old blind stopPropagation() on the panel blocked ALL touch scrolling — that is what
+    // made the picker list unscrollable on laptops (touchpad) and phones.
+    const lastY: { v: number } = { v: 0 };
+    const onTouchMove = (e: TouchEvent) => {
+      const y = e.touches[0]?.clientY ?? 0;
+      const goingUp = y < lastY.v;
+      lastY.v = y;
+      const el = findScrollable(e.target as HTMLElement);
+      if (!el) {
+        e.preventDefault();
+        return;
+      }
+      const atTop = el.scrollTop <= 1 && goingUp;
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 2 && !goingUp;
+      if (atTop || atBottom) {
+        e.preventDefault();
+        return;
+      }
+      e.stopPropagation();
+    };
+    const onWheel = (e: WheelEvent) => {
+      const el = findScrollable(e.target as HTMLElement);
+      if (!el) {
+        e.preventDefault();
+        return;
+      }
+      const atTop = el.scrollTop <= 1 && e.deltaY < 0;
+      const atBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 2 && e.deltaY > 0;
+      if (atTop || atBottom) {
+        e.preventDefault();
+        return;
+      }
+      e.stopPropagation();
+    };
+    root.addEventListener("touchmove", onTouchMove, { passive: false });
+    root.addEventListener("wheel", onWheel, { passive: false });
     return () => {
-      root.removeEventListener("touchmove", stop);
-      root.removeEventListener("wheel", preventPageWheel);
+      root.removeEventListener("touchmove", onTouchMove);
+      root.removeEventListener("wheel", onWheel);
     };
   }, [open]);
   const customSection: ModelDef[] = (settings.customModels || [])
