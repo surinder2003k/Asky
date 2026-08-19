@@ -752,7 +752,7 @@ export default function ChatScreen({
     <div className="flex h-full flex-col">
       {/* header */}
       <header className="flex shrink-0 items-center gap-2 border-b border-[var(--asky-border)] px-3 py-2">
-        <button onClick={onToggleSidebar} className="rounded-md p-2 hover:bg-[var(--asky-hover)] lg:hidden">
+        <button onClick={onToggleSidebar} className="rounded-md p-2 hover:bg-[var(--asky-hover)] lg:hidden" title="Open chat sidebar">
           <PanelLeft size={20} />
         </button>
         <ModelChip
