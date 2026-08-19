@@ -213,3 +213,12 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 ## Batch 70 (2026-08-18) — remove web search entirely (user request)
 - [x] Web search removed end-to-end: deleted server /api/web-search route, src/websearch.ts helper, websearch import + search block + hidden-context merging + sources chips in ChatScreen, webSearch section in SettingsModal, and webSearch from storage.ts Settings type/default. Chat is now plain ChatGPT-style — user messages never modified, no search context ever sent.
 - [x] Typecheck clean, 109 tests pass (1 skipped, unchanged), mobile viewport verified, checkpoint saved, GitHub website branch synced.
+
+## Batch 71 (2026-08-19) — GitHub README
+- [x] README.md pushed to website branch (commit 840052d): project info, live link (aichatapp-8ksusdph.manus.space), feature table, provider/model table, getting-started with API keys, tech stack, privacy/keys policy, dev commands, open-source license.
+
+## Batch 72 (2026-08-19) — model picker mobile fixes
+
+- [x] Model picker keyboard fixed: removed autoFocus from the search input (keyboard no longer pops up on open; user taps the field only when they want to type) — autoComplete off, inputMode text, enterKeyHint done.
+- [x] Model list touch scroll fixed: picker now locks page scroll via document.body overflow hidden while open (scroll trapped inside the picker), and the scroll container uses a real computed height (min(480px, calc(100dvh-120px))) with overflow-y-scroll + touch-pan-y + -webkit-overflow-scrolling — reliable mobile touch scroll.
+- [x] Typecheck clean, 109 tests pass (1 skipped), dev server restarted after port conflicts, mobile viewport verified.

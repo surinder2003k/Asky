@@ -91,6 +91,11 @@ body {
 .model-picker-panel::-webkit-scrollbar-track { background: transparent; }
 .model-picker-panel {
   overflow: visible;
+  -webkit-overflow-scrolling: touch;
+}
+.model-picker-panel .touch-pan-y {
+  height: min(480px, calc(100dvh - 120px));
+  -webkit-overflow-scrolling: touch;
 }
 .model-picker-panel > div { min-height: 0; }
 .model-picker-panel > div::-webkit-scrollbar { width: 6px; }

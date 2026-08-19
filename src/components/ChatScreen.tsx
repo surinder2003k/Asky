@@ -1185,6 +1185,15 @@ function ModelChip({
     recordModelUsed(key);
     setModelKey(key);
   };
+  // Lock page scroll while the picker is open so touch scroll stays inside the picker list
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [open]);
   const customSection: ModelDef[] = (settings.customModels || [])
     .filter((c) => Boolean(currentProviderKey[c.provider]))
     .map((c) => ({
@@ -1222,8 +1231,8 @@ function ModelChip({
             className="model-picker-panel absolute left-0 top-full z-50 mt-1.5 w-[300px] max-w-[calc(100vw-24px)] rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg-elev)] shadow-2xl shadow-black/25"
             style={{ maxHeight: "min(480px, calc(100dvh - 120px))" }}
           >
-          {/* Single scroll container (nested overflow + flex broke touch scroll on some Android WebViews) */}
-          <div className="flex flex-col touch-pan-y overflow-y-auto overscroll-contain px-1.5 py-1.5" style={{ maxHeight: "100%" }}>
+          {/* Single anchored scroll container with a real computed height — required for reliable touch scroll on mobile */}
+          <div className="touch-pan-y overflow-y-scroll overscroll-contain px-1.5 py-1.5" style={{ height: "min(480px, calc(100dvh - 120px))" }}>
             {/* Search/filter box */}
             <div className="flex items-center gap-1.5 border-b border-[var(--asky-border)] px-2 pb-1.5 pt-0.5">
               <Search size={13} className="shrink-0 text-[var(--asky-fg-muted)]" />
@@ -1231,7 +1240,9 @@ function ModelChip({
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
                 placeholder="Search models..."
-                autoFocus
+                autoComplete="off"
+                enterKeyHint="done"
+                inputMode="text"
                 className="w-full bg-transparent py-1.5 text-[13px] text-[var(--asky-fg)] outline-none placeholder:text-[var(--asky-fg-muted)]"
               />
               {filter && (
