@@ -131,29 +131,33 @@ def main():
             continue
         if rsha != lsha:
             to_add.append((path, lsha))
-    to_delete = sorted(p for p in remote_files if p not in local_files)
-    print(f"Files to add/update: {len(to_add)}, to delete: {len(to_delete)}")
+    print(f"Files to add/update: {len(to_add)}")
 
     if dry:
         print("DRY RUN - done")
         return
 
     done = 0
+    failed = []
     for path, lsha in to_add:
         try:
             post("/git/blobs", blob_payload(path))
             done += 1
         except Exception as e:
             print(f"ERROR blob {path}: {e}")
-            raise
+            failed.append(path)
         if done % 40 == 0:
             print(f"  ... {done}/{len(to_add)} blobs posted")
             time.sleep(0.5)
-    print(f"All {done} blobs posted.")
+    print(f"All {done} blobs posted. Failed: {len(failed)}")
+    to_delete = sorted(p for p in remote_files if p not in local_files and p not in {p for p, _ in failed})
+    print(f"Remote-only files to delete: {len(to_delete)}")
 
-    # Build tree
+    # Build tree (skip failed blobs)
     tree_entries = []
     for path, lsha in to_add:
+        if path in failed:
+            continue
         tree_entries.append({
             "path": path,
             "mode": "100644",
