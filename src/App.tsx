@@ -207,7 +207,7 @@ function Shell() {
         onClose={() => setSidebarOpen(false)}
         onOpenSettings={() => setSettingsOpen(true)}
       />
-      <main className="relative flex flex-1 flex-col">
+      <main className="relative flex min-w-0 flex-1 flex-col">
         <button
           onClick={() => setSidebarOpen((v) => !v)}
           className="absolute left-3 top-3 z-30 rounded-md p-2 text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)] lg:hidden"

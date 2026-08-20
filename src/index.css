@@ -125,8 +125,15 @@ body {
 .msg-body pre { background: #0d0d0d; border-radius: 8px; padding: 0.8em; overflow-x: auto; margin: 0.5em 0; font-size: 0.85em; position: relative; }
 .msg-body code { font-family: ui-monospace, "Cascadia Code", Menlo, Consolas, monospace; font-size: 0.9em; }
 .msg-body :not(pre) > code { background: var(--asky-bg-input); border-radius: 4px; padding: 0.1em 0.3em; }
+.msg-body { width: 100%; min-width: 0; } /* keep the message body inside the flex row width */
 .msg-body table { border-collapse: collapse; margin: 0.5em 0; font-size: 0.9em; }
-.msg-body th, .msg-body td { border: 1px solid var(--asky-border); padding: 0.4em 0.6em; }
+/* Mobile table fix: tables can never make the message wider than the chat column.
+   On narrow screens the table scrolls horizontally (with a visible scrollbar)
+   instead of overflowing off-screen and cutting text off. */
+.msg-body .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; margin: 0.5em 0; }
+.msg-body table { display: block; max-width: 100%; }
+.msg-body th, .msg-body td { border: 1px solid var(--asky-border); padding: 0.4em 0.6em; white-space: normal; overflow-wrap: break-word; word-break: break-word; }
+.msg-body th { background: var(--asky-bg-input); }
 .msg-body img { max-width: 100%; border-radius: 8px; }
 
 /* typing cursor */

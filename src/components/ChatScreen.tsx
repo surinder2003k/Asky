@@ -27,26 +27,31 @@ import { downloadChatPng, downloadMessagePng } from "../png";
 import { speechSupported, createRecognition, readTranscript, getVoiceLanguageCode, type VoiceStatus } from "../voice";
 import { generateChatTitle } from "../titlegen";
 import { ImageViewer } from "./ImageViewer";
-import { getModelStatus } from "../modelStatus";
+import InstallPrompt from "./InstallPrompt";
+import { formatRecovery, getHealthBar, getModelStatus, type HealthBar } from "../modelStatus";
 import { Mic, MicOff, Image, FileText, Globe, CalendarClock, PenLine, Search, RefreshCcw, ArrowDownCircle, Star, Pencil, Volume2, VolumeX, Bookmark, BookmarkCheck, ChevronsDownUp, CornerDownRight, ListChecks, Settings, FileDown } from "lucide-react";
 
 marked.setOptions({ breaks: true });
 
 /**
  * Mount code previews for fenced html blocks emitted by renderMd.
- * Looks for <div class="code-html-block" data-html-src="..."> placeholders
- * inside `root` (default: whole document) and renders sandboxed iframes.
+ * The fenced HTML source lives inside <textarea class="code-html-src"> (DOMPurify
+ * strips data-* attrs, so we can't use attributes). On mount we read the source,
+ * build the preview bar + sandboxed iframe, and remove the hidden textarea.
  */
 export function mountCodePreviews(root: Document = document) {
   const blocks = root.querySelectorAll<HTMLDivElement>(".code-html-block");
   blocks.forEach((block) => {
     if (block.dataset.mounted) return;
     block.dataset.mounted = "1";
-    let src = block.dataset.htmlSrc ?? "";
-    try {
-      src = decodeURIComponent(src);
-    } catch {
-      /* leave as-is */
+
+    // Extract the source from the embedded textarea (removed from DOM after).
+    // The visible <pre><code> source block is KEPT so users always see the code.
+    let src = "";
+    const ta = block.querySelector<HTMLTextAreaElement>("textarea.code-html-src");
+    if (ta) {
+      src = ta.value ?? "";
+      ta.remove();
     }
     if (!src) return;
 
@@ -77,7 +82,8 @@ export function mountCodePreviews(root: Document = document) {
       closeBtn.textContent = "Close";
       closeBtn.disabled = false;
     });
-    block.replaceChildren(wrap);
+    // Keep the visible source code block; show the preview panel below it.
+    block.appendChild(wrap);
   });
 }
 
@@ -534,6 +540,7 @@ export default function ChatScreen({
           setOpen={setShowHomePicker}
           currentProviderKey={settings.apiKeys}
         />
+        <InstallPrompt />
         <div className="grid w-full max-w-2xl gap-2">
           {suggestions.map((s) => (
             <button
@@ -584,7 +591,7 @@ export default function ChatScreen({
             )}
           </div>
         )}
-        <div className={`mx-auto w-full ${settings.chatWidth === "compact" ? "max-w-2xl" : "max-w-3xl"}`}>
+        <div className={`mx-auto w-full ${settings.chatWidth === "compact" ? "max-w-2xl" : "max-w-3xl lg:max-w-4xl"}`}>
           {image && (
             <div className="relative mb-2 inline-block">
               <img
@@ -869,7 +876,7 @@ export default function ChatScreen({
       {/* messages */}
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto"
+        className="min-h-0 min-w-0 flex-1 overflow-y-auto"
         onDragOver={(e) => e.preventDefault()}
         onDrop={(e) => {
           e.preventDefault();
@@ -877,7 +884,7 @@ export default function ChatScreen({
           if (file) pickImage(file);
         }}
       >
-        <div key={`msgs-${chat?.id}`} className={`mx-auto flex w-full flex-col items-stretch ${settings.chatWidth === "compact" ? "max-w-2xl" : "max-w-3xl"} gap-5 px-4 py-6`}>
+        <div key={`msgs-${chat?.id}`} className={`mx-auto flex w-full flex-col items-stretch ${settings.chatWidth === "compact" ? "max-w-2xl" : "max-w-3xl lg:max-w-4xl"} gap-5 px-4 py-6`}>
           {!hasContent && (
             <div className="flex self-center flex-col items-center gap-3 pt-24">
               <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--asky-accent-soft)]">
@@ -967,6 +974,9 @@ export default function ChatScreen({
         </div>
       </div>
 
+      {/* install prompt (home screen, PWA) */}
+      {chat && !hasContent && <InstallPrompt />}
+
       {/* scroll buttons */}
       <div className="pointer-events-none absolute bottom-28 right-5 flex flex-col gap-1">
         <button
@@ -987,7 +997,7 @@ export default function ChatScreen({
 
       {/* composer */}
       <div className="shrink-0 border-t border-[var(--asky-border)] px-3 py-3">
-        <div className={`mx-auto w-full ${settings.chatWidth === "compact" ? "max-w-2xl" : "max-w-3xl"}`}>
+        <div className={`mx-auto w-full ${settings.chatWidth === "compact" ? "max-w-2xl" : "max-w-3xl lg:max-w-4xl"}`}>
           {image && (
             <div className="relative mb-2 inline-block">
               <img
@@ -1557,24 +1567,56 @@ function ModelOptionRow({
         />
       </span>
       <span className="flex shrink-0 items-center gap-1.5">
-        <span
-          className={`h-1.5 w-1.5 rounded-full ${
-            status === "ok" ? "bg-green-400" : status === "rate-limited" ? "bg-red-400" : "bg-[var(--asky-fg-muted)]/40"
-          }`}
-          title={
-            status === "ok"
-              ? "Working"
-              : status === "rate-limited"
-                ? "Daily limit hit — switch to another model"
-                : "Not tested yet"
-          }
-        />
+        <HealthBarRow modelKey={model.key} hasKey={hasKey} />
         {!hasKey && <span className="text-[11px] text-[var(--asky-fg-muted)]">add key</span>}
       </span>
     </button>
   );
 }
 
+/**
+ * Green rate-limit progress bar above each model row.
+ *
+ * Free providers expose no remaining-quota headers, so the bar is derived from
+ * observed outcomes: full green = healthy, empty/reddish = limit hit (slowly
+ * refills across the recovery window), half muted = never tested.
+ */
+function HealthBarRow({ modelKey, hasKey }: { modelKey: string; hasKey: boolean }) {
+  const [tick, setTick] = useState(0);
+  // Tick every second while a "limited" bar is refilling so the user SEES progress.
+  const bar: HealthBar = getHealthBar(modelKey);
+  useEffect(() => {
+    if (!hasKey || bar.state !== "limited") return;
+    const t = setInterval(() => setTick((v) => v + 1), 1000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hasKey, bar.state, Math.floor(bar.recoverInMs / 10000)]);
+  void tick;
+  // Re-read the live bar (recalc at render) — tick only forces re-render.
+  const live: HealthBar = getHealthBar(modelKey);
+  if (!hasKey) return null;
+  const barColor = live.state === "healthy" ? "bg-green-400" : live.state === "limited" ? "bg-red-400" : "bg-[var(--asky-fg-muted)]/40";
+  const trackBg = live.state === "limited" ? "bg-red-400/15" : "bg-[var(--asky-fg-muted)]/15";
+  return (
+    <span
+      className="flex w-12 flex-col gap-0.5"
+      title={
+        live.state === "healthy"
+          ? "Working — quota available"
+          : live.state === "limited"
+            ? `Daily limit hit — refills in ${formatRecovery(live.recoverInMs)} (switch to another model meanwhile)`
+            : "Not tested yet"
+      }
+    >
+      <span className={`h-1 w-full overflow-hidden rounded-full ${trackBg}`}>
+        <span className={`block h-full rounded-full ${barColor}`} style={{ width: `${Math.max(2, live.level)}%`, transition: "width 0.8s linear" }} />
+      </span>
+      <span className="text-right text-[9px] leading-none text-[var(--asky-fg-muted)]/70">
+        {live.state === "limited" ? `${formatRecovery(live.recoverInMs)} left` : live.state === "healthy" ? "ok" : "—"}
+      </span>
+    </span>
+  );
+}
 function MessageRow({
   msg,
   isStreaming,
@@ -1754,7 +1796,7 @@ function MessageRow({
         <Sparkles size={15} className="text-[var(--asky-accent)]" />
       </div>
       <div className="min-w-0 flex-1">
-        <div className="msg-body text-[15px] leading-relaxed">
+        <div className="msg-body break-words text-[15px] leading-relaxed">
           {hasReasoning && (
             <details className="mb-1 rounded-lg border border-[var(--asky-border)] bg-[var(--asky-bg-elev)]">
               <summary className="cursor-pointer px-3 py-1.5 text-xs text-[var(--asky-fg-muted)]">

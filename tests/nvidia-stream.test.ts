@@ -22,7 +22,7 @@ describe("Nvidia streaming E2E", () => {
         stream: true,
         max_tokens: 50,
       }),
-      signal: AbortSignal.timeout(60000),
+      signal: AbortSignal.timeout(300000),
     });
 
     // Nvidia free tiers return 429 when the account's daily quota is exhausted
@@ -50,5 +50,5 @@ describe("Nvidia streaming E2E", () => {
       .filter(Boolean) as Array<{ choices?: Array<{ delta?: { content?: string } }> }>;
     const content = deltas.map((d) => d.choices?.[0]?.delta?.content || "").join("");
     expect(content.length).toBeGreaterThan(0);
-  }, 90000);
+  }, 150000);
 });

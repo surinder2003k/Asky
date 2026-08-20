@@ -117,8 +117,14 @@ def main():
     # tree response; remote tree for blobs has no sha? git API trees DO include sha.)
     remote_sha_map = {t["path"]: t.get("sha") for t in remote_tree(base_sha) if t["type"] == "blob"}
 
+    EXCLUDE = {
+        "scripts/sanitize-for-github.py",  # contains a stale PAT -> 422 on POST
+        "tests/__pycache__/table_mobile_audit.cpython-312.pyc",
+    }
     to_add = []
     for path in sorted(local_files):
+        if path in EXCLUDE:
+            continue
         rsha = remote_sha_map.get(path)
         lsha = sha_of(path)
         if lsha is None:

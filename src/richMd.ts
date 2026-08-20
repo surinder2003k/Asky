@@ -93,11 +93,30 @@ function postprocess(
 }
 
 const renderer = new marked.Renderer();
+// Mobile/tablet fix: wrap every markdown table in a horizontal-scroll container
+// so a wide table can never push the message wider than the chat column.
+// Render table cells (header/body are arrays of cell/row tokens in newer marked).
+function renderTableCell(c: any, head: boolean): string {
+  const tag = head ? "th" : "td";
+  return `<${tag}${c.align ? ` align="${c.align}"` : ""}>${c.text ?? ""}</${tag}>`;
+}
+function renderTableRow(r: any, head: boolean): string {
+  return `<tr>${(Array.isArray(r) ? r : []).map((c: any) => renderTableCell(c, head)).join("")}</tr>`;
+}
+renderer.table = (token: any) => {
+  const headerRow = `<tr>${(token.header ? token.header : []).map((c: any) => renderTableCell(c, true)).join("")}</tr>`;
+  // marked's Table token: `header` = header cells, `rows` = body row arrays
+  const bodyRows = token.rows ? token.rows.map((r: any) => renderTableRow(r, false)).join("") : "";
+  return `<div class="table-wrap"><table><thead>${headerRow}</thead><tbody>${bodyRows}</tbody></table></div>`;
+};
 renderer.code = ({ text, lang }) => {
   const l = String(lang ?? "").trim().toLowerCase();
   if (l === "html" || l === "html5" || l === "htm") {
-    const src = encodeURIComponent(text);
-    return `<div class="code-html-block" data-html-src="${src}">[html preview]</div>`;
+    // NOTE: DOMPurify strips `data-*` attributes, so the source must live INSIDE
+    // the element as text content (DOMPurify keeps textContent). mountCodePreviews
+    // reads it from the nested <textarea class="code-html-src"> and then removes it.
+    const esc = htmlEsc(text);
+    return `<div class="code-html-block"><textarea class="code-html-src" hidden>${esc}</textarea><pre><code class="language-html">${esc}</code></pre></div>`;
   }
   if (l === "mermaid") {
     return `<pre><code class="language-mermaid" data-mermaid-src="${htmlEsc(text.trim())}">${htmlEsc(text)}</code></pre>`;

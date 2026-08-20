@@ -72,11 +72,13 @@ app.post("/api/chat", async (req, res) => {
       headers["HTTP-Referer"] = "https://asky.manus.space";
       headers["X-Title"] = "Asky";
     }
-    // CRITICAL: the client sends `body` = { messages, stream, ... } WITHOUT the
-    // `model` field. Providers reject any chat request missing `model`, so it
-    // MUST be merged into the payload sent upstream (was previously missing —
-    // the classic "model field is required" 400).
-    upstreamBody = { ...(body ?? {}), model: modelId };
+    // CRITICAL: the client sends `body` = { messages, stream, ... } and
+    // resolves the exact upstream model id itself (bare id for
+    // mistral/groq/openrouter/opencode; full catalog id for nvidia's VL
+    // models). Providers reject any chat request missing `model`, so the
+    // client's resolved id MUST be merged upstream (falling back to modelId
+    // only if the client didn't send one).
+    upstreamBody = { ...(body ?? {}), model: (body && body.model) || modelId };
   }
 
   try {

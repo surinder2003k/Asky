@@ -619,7 +619,7 @@ function ChatRow({
           e.preventDefault();
           setMenuOpen(true);
         }}
-        className="flex flex-1 flex-col items-start px-2.5 py-2 text-left"
+        className="flex min-w-0 flex-1 flex-col items-start gap-0 px-2.5 py-2 text-left"
       >
         {editing ? (
           <input
@@ -640,20 +640,20 @@ function ChatRow({
           />
         ) : (
           <>
-            <span className="flex items-center gap-1.5 truncate text-sm">
+            <span className="flex w-full min-w-0 items-center gap-1.5">
               <MessageSquare size={13} className="shrink-0 text-[var(--asky-fg-muted)]" />
-              <span className="truncate">{chat.title}</span>
-                  {(() => {
-                    const last = [...chat.messages].reverse().find((x) => x.role === "assistant" && x.content && !x.error);
-                    if (!last) return null;
-                    return (
-                      <span className="mt-0.5 block truncate text-[11px] leading-tight text-[var(--asky-fg-muted)]" title={last.content}>
-                        {last.content.slice(0, 60).replace(/\n/g, " ")}
-                      </span>
-                    );
-                  })()}
+              <span className="min-w-0 flex-1 truncate text-sm">{chat.title}</span>
               {chat.pinned && <Pin size={11} className="shrink-0 text-[var(--asky-accent)]" />}
             </span>
+            {(() => {
+              const last = [...chat.messages].reverse().find((x) => x.role === "assistant" && x.content && !x.error);
+              if (!last) return null;
+              return (
+                <span className="mt-0.5 block w-full truncate text-[11px] leading-tight text-[var(--asky-fg-muted)]" title={last.content}>
+                  {last.content.slice(0, 60).replace(/\n/g, " ")}
+                </span>
+              );
+            })()}
             <span
               className="text-[11px] text-[var(--asky-fg-muted)]"
               title={new Date(chat.updatedAt).toLocaleString()}

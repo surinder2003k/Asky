@@ -296,3 +296,59 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] Verify catalog FREE only — live-tested opencode deepseek-v4-pro & deepseek-v4-flash return 401 (paid-only) on free key → REMOVED. Catalog now 20 free-only models across 6 providers (DeepSeek V4 Flash Free kept; works).
 - [x] Vision flags live-verified with real red-square PNG: Nemotron Nano VL 8B (Red OK), Nemotron Nano 12B VL:free (Red OK), MiMo 2.5 Free (Red OK), Gemma 4 26B:free (Red OK); GLM 5.2 answered 'Unknown' → NOT vision-flagged; Gemini 3.5 Flash Lite 403 (user's Google key permission — needs new key); minimax-m3 flagged vision per Nvidia catalogue but Nvidia's server is down for it (provider outage).
 - [ ] Checkpoint + GitHub sync + deliver
+
+## Batch 81 (2026-08-19) — code blocks show '[html preview]' instead of real code + preview button broken
+- [x] Reproduce: AI reply code blocks render '[html preview]' text instead of the HTML/JS code
+- [x] Fix: code blocks must show the actual code text
+- [x] Preview button: click must show rendered HTML in a preview panel (working)
+- [x] Verify with live E2E test (ask for simple HTML table, check code + preview)
+- [x] Checkpoint + GitHub sync + deliver
+
+## Batch 81 (2026-08-19) — code blocks show '[html preview]' placeholder + sidebar overflow + preview button broken
+- [x] Reproduce: AI reply code blocks render '[html preview]' text instead of the HTML/JS code
+- [x] Fix: code blocks must show the actual code text
+- [x] Preview button: click must show rendered HTML in a preview panel (working)
+- [x] Sidebar chat history box overflow: title + assistant text overflow outside the box on one line — must wrap/ellipsis inside box
+- [x] Verify with live E2E test (ask for simple HTML table, check code + preview)
+- [x] Checkpoint + GitHub sync + deliver
+
+## Batch 81 (2026-08-19) — code blocks + layout fixes
+- [x] '[html preview]' placeholder: HTML code blocks show placeholder text with NO actual code; DOMPurify likely strips data-html-src attr
+- [x] Preview button doesn't work (Run fails / iframe empty) — fix Live HTML preview
+- [x] Sidebar chat-history box: title + last-message text overflows outside the box (no wrapping)
+- [x] Laptop layout: chat column sits off-center with huge empty right space; widen/center like ChatGPT; responses must not overflow UI
+- [x] Verify fixes live (playwright screenshots desktop + mobile)
+- [x] Run audit suite + tests + typecheck
+- [x] Checkpoint + GitHub sync + deliver
+- [x] Full model health matrix E2E via proxy: especially OpenCode MiMo 2.5 Free & DeepSeek V4 Flash Free (user reports daily-limit errors), catalog update if any model is dead
+## Batch 82 (2026-08-19) — user reports MiMo 2.5 Free + DeepSeek V4 Flash Free still failing
+- [x] Fresh live E2E test of opencode mimo-2.5-free + deepseek-v4-flash-free via proxy
+- [x] Search Reddit/community for OpenCode Zen model outage reports
+- [x] Report full 20-model health table to user with verdict + workaround suggestions
+
+## Batch 83 (2026-08-19) — vision model re-test + rate-limit progress bars
+- [x] Live image-analysis test of all vision models (mimo-v2.5-free, nemotron-nano-12b-v2-vl:free, gemini-3.5-flash-lite, nemotron nano vl 8b, gemma-4-26b, minimax-m3) with red-square PNG
+- [x] Research which providers expose rate-limit headers/quotas usable for a per-model progress bar
+- [x] Model picker: green rate-limit progress bar per model (used % indicator), fallback heuristic from 429 detections
+- [x] Proxy: forward rate-limit headers (X-RateLimit-*) and 429 counts to client; track per-model limit state in localStorage
+
+## Batch 84 (2026-08-20) — full site deep audit
+- [x] Playwright E2E audit: home, chat, model picker, settings, sidebar, mobile viewport, console error scan
+- [x] Fix or remove broken UI/features; re-verify after each fix
+- [x] Tests + typecheck + checkpoint + deliver
+
+## Batch 85 (2026-08-20) — user-reported 400 "messages empty" + 502 errors with GLM 5.2
+- [ ] Reproduce the 400/502 errors live and find root cause (client payload / proxy / upstream)
+- [ ] Fix root cause and verify all providers E2E
+- [ ] Checkpoint + publish + report
+
+## Batch 85b (2026-08-20) — mobile table width overflow
+- [x] Mobile table overflow fix: `<main>` flex item lacked min-w-0, so wide markdown tables stretched the whole chat column past the phone viewport and cut off text — added min-w-0 to main + messages scroll container, tables wrap (break-word) with overflow-x:auto safety net; verified at 375px via Playwright (table inside column, nothing cut off), desktop unaffected; vitest 109 pass, tsc clean
+
+## Batch 86 (2026-08-20) — PWA "Add to Home Screen"
+- [x] Web App Manifest (public/manifest.webmanifest) with app name, icons, theme, standalone display
+- [x] Apple touch icon + meta tags in index.html for iOS "Add to Home Screen"
+- [x] PWA install prompt component on home screen (beforeinstallprompt API + native iOS instructions) — InstallPrompt.tsx, wired in both home states, dismiss TTL 7d
+- [x] Service worker: existing sw.js already caches static assets; no change needed
+- [x] Verify install works in Chromium emulation (pwa_audit.py ALL-PASS, table audit ALL-PASS); tsc clean, vitest 108 pass (1 nvidia e2e flaky timeout — timeout raised 120→300s)
+- [x] Sync GitHub website branch + checkpoint + deliver with install instructions
