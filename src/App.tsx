@@ -8,6 +8,8 @@ import ChatScreen from "./components/ChatScreen";
 import SettingsModal from "./components/SettingsModal";
 import PinScreen from "./components/PinScreen";
 import OfflineNotice, { useIsOffline } from "./components/OfflineNotice";
+import LandingPage from "./components/LandingPage";
+import { isLoggedIn, logout } from "./auth";
 /**
  * Catches any render-time crash and shows a friendly recovery screen instead
  * of a blank page. Also offers clearing corrupted storage state, which is a
@@ -139,6 +141,7 @@ function Shell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [unlocked, setUnlocked] = useState(!settings.pinEnabled);
+  const [authed, setAuthed] = useState(isLoggedIn());
   const shareHandled = useRef(false);
 
   // Hydrate a shared chat from ?share= (or #share=) URL parameter on first load.
@@ -196,6 +199,14 @@ function Shell() {
     return <OfflineNotice />;
   }
 
+  if (!authed) {
+    return (
+      <LandingPage
+        onLoggedIn={() => setAuthed(true)}
+      />
+    );
+  }
+
   if (settings.pinEnabled && !unlocked) {
     return <PinScreen pinHash={settings.pinHash!} onUnlock={() => setUnlocked(true)} />;
   }
@@ -218,9 +229,13 @@ function Shell() {
         <ChatScreen
           onToggleSidebar={() => setSidebarOpen((v) => !v)}
           onOpenSettings={() => setSettingsOpen(true)}
+          onLogout={() => {
+            logout();
+            setAuthed(false);
+          }}
         />
       </main>
-      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} />}
+      {settingsOpen && <SettingsModal onClose={() => setSettingsOpen(false)} onLogout={() => { logout(); setAuthed(false); setSettingsOpen(false); }} />}
     </div>
   );
 }

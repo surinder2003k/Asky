@@ -352,3 +352,18 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] Service worker: existing sw.js already caches static assets; no change needed
 - [x] Verify install works in Chromium emulation (pwa_audit.py ALL-PASS, table audit ALL-PASS); tsc clean, vitest 108 pass (1 nvidia e2e flaky timeout — timeout raised 120→300s)
 - [x] Sync GitHub website branch + checkpoint + deliver with install instructions
+
+## Batch 87 (2026-08-20) — homepage always opens as new chat
+- [x] Homepage always opens on the empty "How can I help?" suggestions state — store no longer restores last activeChatId on load; chats stay accessible via sidebar
+- [x] Verify: homepage_load_audit.py ALL-PASS (chat list intact, chat opens from sidebar, messages not shown on home)
+
+## Batch 88 (2026-08-20) — landing page + custom login
+- [x] Homepage always opens as new chat (empty suggestions state); last chat NOT auto-restored — Batch 87 fix
+- [x] Landing page with site info (Asky intro, 6 feature cards, privacy note) + login form — LandingPage.tsx
+- [x] Login: username=Sunny, password=3424 (src/credentials.ts, gitignored); salted sha256 compare in src/auth.ts, token in localStorage asky.session, no plaintext, no external auth
+- [x] Login button shows loading spinner while verifying (450ms)
+- [x] Wrong credentials show generic "Incorrect username or password" (never reveals which)
+- [x] Session persistence 30 days: logged-in users revisit → straight to chat screen
+- [x] Logout in chat header + home header + SettingsModal → returns to landing page
+- [x] Chat screen hidden behind login (App.tsx gate)
+- [x] Landing page mobile responsive (login_audit.py ALL-PASS 9 checks incl. mobile); tsc clean; login/homepage/table audits pass; nvidia-stream e2e flaky (provider network, retried)

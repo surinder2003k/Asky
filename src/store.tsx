@@ -77,11 +77,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     const f = loadFolders();
     setChats(c);
     setFolders(f);
+    // Homepage always opens on the empty "How can I help?" state. The last
+    // active chat is NOT auto-restored — it stays in the sidebar history and
+    // the user can open it explicitly. The only auto-open case is an imported
+    // chat (deep link / import share) targeting a specific chat id.
     const active = importedId.current && c.some((x) => x.id === importedId.current)
       ? importedId.current
-      : c.length
-        ? c[0].id
-        : null;
+      : null;
     setActiveChatIdState(active);
     document.documentElement.setAttribute("data-theme", loadSettings().theme);
     document.documentElement.setAttribute("data-accent", loadSettings().accent);

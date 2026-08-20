@@ -66,3 +66,6 @@ Thumbs.db
 .project-config.json
 lib/builtin-keys.ts
 session_notes.md
+
+# Login credentials (username/password never enter the repo)
+src/credentials.ts

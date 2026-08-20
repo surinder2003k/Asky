@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Check, Eye, EyeOff, Keyboard, Plus, Trash2, X, Mic, Monitor, Search } from "lucide-react";
+import { Check, Eye, EyeOff, Keyboard, Plus, Trash2, X, Mic, Monitor, Search, LogOut } from "lucide-react";
 import type { CustomModelDef, Settings, PromptTemplate } from "../storage";
 import { PROVIDER_LABELS } from "../providers";
 import { useApp, hashPin } from "../store";
@@ -23,7 +23,7 @@ const PROVIDER_META: { key: ProviderKey; label: string; envHint: string; getApiU
   { key: "gemini", label: "Gemini", envHint: "aistudio.google.com", getApiUrl: "https://aistudio.google.com/app/apikey" },
 ];
 
-export default function SettingsModal({ onClose }: { onClose: () => void }) {
+export default function SettingsModal({ onClose, onLogout }: { onClose: () => void; onLogout?: () => void }) {
   const {
     settings,
     setApiKeys,
@@ -524,6 +524,24 @@ export default function SettingsModal({ onClose }: { onClose: () => void }) {
               className="w-full rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg)] px-3 py-2 text-sm outline-none focus:border-[var(--asky-accent)]"
             />
           </section>
+
+          {onLogout && (
+            <section className="mb-2 mt-4 border-t border-[var(--asky-border)] pt-4">
+              <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                <LogOut size={14} /> Session
+              </h3>
+              <p className="mb-2 text-xs text-[var(--asky-fg-muted)]">
+                Signing out takes you back to the login page. Your chats and settings
+                stay safe on this device.
+              </p>
+              <button
+                onClick={onLogout}
+                className="rounded-xl border border-red-500/30 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
+              >
+                Log out
+              </button>
+            </section>
+          )}
         </div>
       </div>
     </div>
