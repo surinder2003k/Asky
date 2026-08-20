@@ -185,13 +185,16 @@ def main():
     if to_delete:
         print(f"Deleting {len(to_delete)} remote-only files...")
         for path in to_delete:
-            fobj = get(f"/contents/{path}?ref={BRANCH}")
-            post(f"/contents/{path}", {
-                "message": f"Remove {path} (project restructuring)",
-                "sha": fobj["sha"],
-                "branch": BRANCH,
-            })
-            time.sleep(0.4)
+            try:
+                fobj = get(f"/contents/{path}?ref={BRANCH}")
+                post(f"/contents/{path}", {
+                    "message": f"Remove {path} (project restructuring)",
+                    "sha": fobj["sha"],
+                    "branch": BRANCH,
+                })
+                time.sleep(0.4)
+            except Exception as e:
+                print(f"DELETE SKIPPED {path}: {e}")
         print("Deletes done.")
     print("SYNC COMPLETE")
 
