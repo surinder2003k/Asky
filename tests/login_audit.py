@@ -25,6 +25,7 @@ def check(name: str, ok: bool) -> None:
 async def main() -> None:
     async with async_playwright() as pw:
         browser = await pw.chromium.launch()
+        mctx = None
 
         # --- fresh visit: landing page must be shown ---
         ctx = await browser.new_context(viewport={"width": 1280, "height": 900})
@@ -54,19 +55,29 @@ async def main() -> None:
         # --- right credentials ---
         await page.fill('input[autocomplete="username"]', "Sunny")
         await page.fill('input[autocomplete="current-password"]', "3424")
-        # Track the loading state immediately (spinner visible during the submit delay).
-        spinner_seen = await page.evaluate_handle("""() => {
-            const o = { seen: false };
-            const iv = setInterval(() => {
+        # Track the loading state right after the click (disabled button + "Signing in..." text).
+        # Login is now near-instant (<5ms hashing), so the window is short — poll every 20ms.
+        # The button gets unmounted as the app navigates to the chat screen,
+        # so capture the loading moment (disabled + "Signing in...") into a
+        # plain window array BEFORE navigation destroys the landing DOM.
+        await page.evaluate("""() => {
+            window.__loadStates = [];
+            window.__loadIv = setInterval(() => {
                 const btn = document.querySelector('button[type=submit]');
-                if (btn && btn.querySelector('svg.animate-spin')) o.seen = true;
-            }, 25);
-            window["__spinnerObs"] = { o, iv };
-            return o;
+                window.__loadStates.push(
+                    btn ? [btn.disabled, (btn.textContent || '').trim()] : ["NOBTN"]
+                );
+            }, 10);
         }""")
         await page.click("button[type=submit]")
-        await page.wait_for_timeout(4000)
-        loading_was_shown = await spinner_seen.evaluate("o => o.seen")
+        await page.wait_for_timeout(2500)
+        loading_was_shown = await page.evaluate("""() => {
+            clearInterval(window.__loadIv);
+            const seen = (window.__loadStates || []).some(
+                (s) => s[0] === true || String(s[1] || '').includes('Signing in')
+            );
+            return seen;
+        }""")
         check("login_loading_state", bool(loading_was_shown))
         chat_now = bool(await page.locator('textarea[placeholder="Message Asky"]').first.is_visible())
         landing_gone = not bool(await page.locator("text=Welcome back").count())
@@ -79,6 +90,35 @@ async def main() -> None:
         no_landing = not bool(await page.locator("text=Welcome back").count())
         check("session_persists", still_chat and no_landing)
 
+        # --- "Remember this device" toggle OFF → session not persisted ---
+        mctx = await browser.new_context(viewport={"width": 375, "height": 812})
+        mpage2 = await mctx.new_page()
+        await mpage2.goto(BASE, wait_until="domcontentloaded")
+        await mpage2.wait_for_timeout(2000)
+        await mpage2.fill('input[autocomplete="username"]', "Sunny")
+        await mpage2.fill('input[autocomplete="current-password"]', "3424")
+        # uncheck the remember toggle (defaults to checked)
+        cb = mpage2.locator("label:has-text('Remember this device for 30 days') input[type='checkbox']")
+        lbl = mpage2.locator("label:has-text('Remember this device for 30 days')")
+        toggle_state = await cb.is_checked()
+        if toggle_state:
+            # Click the visible label (the checkbox itself is sr-only); the label
+            # forwards the click to the controlled input so React state flips.
+            await lbl.click()
+        await mpage2.wait_for_timeout(200)
+        unchecked = not bool(await cb.is_checked())
+        check("remember_toggle_off", unchecked)
+        await mpage2.click("button[type=submit]")
+        await mpage2.wait_for_timeout(1500)
+        chat2 = bool(await mpage2.locator('textarea[placeholder="Message Asky"]').first.is_visible())
+        check("login_without_remember_works", chat2)
+        await mpage2.reload(wait_until="domcontentloaded")
+        await mpage2.wait_for_timeout(2500)
+        landing_back = bool(await mpage2.locator("text=Welcome back").first.is_visible())
+        check("no_persist_when_remember_off", landing_back)
+        await mpage2.close()
+        # Keep the context alive so a fresh page can be created below for the
+        # mobile landing check.
         # --- logout via the header Log out button, then verify Settings also has Log out ---
         await page.click('button[aria-label="Log out"], button[title="Log out"]')
         await page.wait_for_timeout(1200)
@@ -86,7 +126,8 @@ async def main() -> None:
         check("logout_returns_to_landing", back_to_landing)
 
         # --- mobile layout of the landing page ---
-        mctx = await browser.new_context(viewport={"width": 375, "height": 812})
+        if not mctx:
+            mctx = await browser.new_context(viewport={"width": 375, "height": 812})
         mpage = await mctx.new_page()
         await mpage.goto(BASE, wait_until="domcontentloaded")
         await mpage.wait_for_timeout(2000)

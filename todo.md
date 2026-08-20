@@ -367,3 +367,10 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] Logout in chat header + home header + SettingsModal → returns to landing page
 - [x] Chat screen hidden behind login (App.tsx gate)
 - [x] Landing page mobile responsive (login_audit.py ALL-PASS 9 checks incl. mobile); tsc clean; login/homepage/table audits pass; nvidia-stream e2e flaky (provider network, retried)
+
+## Batch 89 (2026-08-20) — login stuck fix + 3 improvements
+- [x] Reproduce login stuck/lag: root cause = dynamic import of credentials module on every login + 450ms artificial delay — removed both; hashing now local + instant (<5ms); button disabled + "Signing in..." cue before navigation; session token in localStorage; login paint fix: one-frame defer before onLoggedIn so the cue always paints even after a failed attempt (React 19 concurrent render was skipping the paint)
+- [x] Password change option in Settings (enter old → set new, validated against stored salted hash; credentials editable at runtime in auth.ts since credentials.ts is gitignored; re-login verified with the new password)
+- [x] "Remember this device" toggle at login (default ON, 30d; OFF = session only — session cleared on revisit)
+- [x] Table tap-to-copy: tap a markdown table to copy its data as CSV/TSV to clipboard with visual feedback ("Table copied" hint; mobile + desktop); csvQueue reset added to renderRichMd so placeholders never accumulate across renders
+- [x] Verify all flows desktop + mobile: login_audit 11 checks ALL-PASS, changepw_audit 9 checks ALL-PASS, tap_copy_audit ALL-PASS, homepage_load_audit ALL-PASS, table_mobile_audit ALL-TABLE-CHECKS-PASS; tsc clean; vitest 108/109 (1 known nvidia provider-network flake, unchanged)

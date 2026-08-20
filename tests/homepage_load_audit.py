@@ -65,6 +65,16 @@ def main():
         page.goto(BASE, wait_until="networkidle")
         page.wait_for_timeout(1500)
 
+        # Batch-88 login gate: log in first so the app actually reaches the
+        # chat screen (the test page must pass the landing page).
+        if page.locator("text=Welcome back").first.is_visible():
+            page.fill('input[autocomplete="username"]', "Sunny")
+            page.fill('input[autocomplete="current-password"]', "3424")
+            page.click("button[type=submit]")
+            page.wait_for_timeout(1500)
+        page.reload(wait_until="networkidle")
+        page.wait_for_timeout(1500)
+
         # 1. Empty home state must be visible (title + suggestions)
         home_visible = page.locator("text=How can I help?").first.is_visible() if page.locator("text=How can I help?").count() else False
         # composer placeholder
@@ -76,7 +86,9 @@ def main():
         results.append(("composer_visible", composer_visible))
         results.append(("last_chat_NOT_restored", not old_in_chat))
 
-        # 2. Sidebar has the old chats (chat rows live inside <aside>)
+        # 2. Sidebar has the old chats (chat rows live inside <aside>).
+        # Filter out stale rows left over from other audit runs (e.g. the
+        # tap-copy audit's "Table audit" chat) so only the seeded chats count.
         titles_found = []
         for title in ("Old Test Chat", "Second Old Chat"):
             matches = page.locator(f"aside :text('{title}')").count()

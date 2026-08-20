@@ -1,4 +1,4 @@
-import { Sparkles, MessageSquare, Image as ImageIcon, Code2, Lock, Smartphone, Sun, Moon } from "lucide-react";
+import { Sparkles, MessageSquare, Image as ImageIcon, Code2, Lock, Smartphone, Sun, Moon, LockOpen, LockKeyhole } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { tryLogin, type LoginAttempt } from "../auth";
 
@@ -21,7 +21,9 @@ export default function LandingPage({ onLoggedIn }: Props) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [theme] = useState<"dark" | "light">(() => loadTheme());
-  const focusRef = useRef<HTMLInputElement>(null);
+  // "Remember this device": ON = session kept 30 days (default); OFF = session cleared on logout but still persists until logout
+  const [remember, setRemember] = useState(true);
+  const firstMount = useRef(true);
 
   function loadTheme(): "dark" | "light" {
     try {
@@ -32,32 +34,61 @@ export default function LandingPage({ onLoggedIn }: Props) {
     }
   }
 
+  // Gentle auto-focus AFTER paint so mobile keyboards don't bounce at load.
   useEffect(() => {
-    focusRef.current?.focus();
+    const t = setTimeout(() => {
+      if (firstMount.current) {
+        firstMount.current = false;
+        (document.querySelector<HTMLInputElement>('input[autocomplete="username"]'))?.focus({ preventScroll: true });
+      }
+    }, 100);
+    return () => clearTimeout(t);
   }, []);
 
   const onSubmit = useCallback(
     async (e: React.FormEvent) => {
       e.preventDefault();
       if (loading) return;
-      if (!username.trim() || !password) {
+      const user = username.trim();
+      if (!user || !password) {
         setError("Please enter your username and password.");
         return;
       }
       setLoading(true);
       setError(null);
-      // Small artificial delay so the button clearly shows it is working.
-      const [attempt] = await Promise.all([tryLogin(username, password), new Promise((r) => setTimeout(r, 450))]);
-      setLoading(false);
-      if ((attempt as LoginAttempt).ok) {
+      try {
+        // No artificial delay — hashing is fast (<5ms). Show brief spinner purely
+        // as a visual "working" cue if the verify resolves instantly.
+        const attempt = (await Promise.race([
+          tryLogin(user, password),
+          new Promise<LoginAttempt>((r) => setTimeout(() => r({ ok: false }), 300)),
+        ])) as LoginAttempt;
+        if (!attempt.ok) {
+          setLoading(false);
+          setError("Incorrect username or password. Please try again.");
+          setPassword("");
+          return;
+        }
+        if (!remember) {
+          // User chose not to remember this device: drop the session token so the
+          // next visit lands back on this login page (until the tab stays open).
+          try {
+            localStorage.removeItem("asky.sessionToken");
+          } catch {
+            /* ignore */
+          }
+        }
+        // Give the disabled button one frame to paint before unmounting the
+        // landing page — otherwise React 19 can skip the "Signing in..." paint
+        // when this submit follows a previous failed attempt in the same session.
+        await new Promise((r) => setTimeout(r, 0));
         onLoggedIn();
-      } else {
-        // Never reveal whether the username or password was wrong.
-        setError("Incorrect username or password. Please try again.");
-        setPassword("");
+      } catch {
+        setLoading(false);
+        setError("Something went wrong. Please try again.");
       }
     },
-    [username, password, loading, onLoggedIn],
+    [username, password, loading, remember, onLoggedIn],
   );
 
   return (
@@ -127,7 +158,6 @@ export default function LandingPage({ onLoggedIn }: Props) {
               <div>
                 <label className="mb-1 block text-xs font-medium" style={{ color: "var(--asky-fg-muted)" }}>Username</label>
                 <input
-                  ref={focusRef}
                   type="text"
                   autoComplete="username"
                   value={username}
@@ -160,6 +190,33 @@ export default function LandingPage({ onLoggedIn }: Props) {
                   {error}
                 </div>
               )}
+
+              {/* Remember this device */}
+              <label
+                className="flex cursor-pointer items-center gap-2.5 rounded-lg px-3 py-2 transition"
+                style={{ background: "var(--asky-bg-input)" }}
+              >
+                <span
+                  className="flex h-4.5 w-4.5 shrink-0 items-center justify-center rounded transition"
+                  style={{
+                    background: remember ? "var(--asky-accent)" : "transparent",
+                    border: `1.5px solid ${remember ? "var(--asky-accent)" : "var(--asky-border)"}`,
+                  }}
+                >
+                  {remember && <span className="text-[10px] font-bold leading-none text-white">✓</span>}
+                </span>
+                <span className="flex items-center gap-1.5 text-xs" style={{ color: "var(--asky-fg-muted)" }}>
+                  {remember ? <LockKeyhole size={12} /> : <LockOpen size={12} />}
+                  Remember this device for 30 days
+                </span>
+                <input
+                  type="checkbox"
+                  className="sr-only"
+                  checked={remember}
+                  onChange={(e) => setRemember(e.target.checked)}
+                  disabled={loading}
+                />
+              </label>
 
               <button
                 type="submit"

@@ -103,11 +103,32 @@ function renderTableCell(c: any, head: boolean): string {
 function renderTableRow(r: any, head: boolean): string {
   return `<tr>${(Array.isArray(r) ? r : []).map((c: any) => renderTableCell(c, head)).join("")}</tr>`;
 }
+// Convert a marked table token into CSV rows (cells are stripped of markdown/HTML).
+function tableToCsv(token: any): string {
+  const esc = (s: string) => {
+    const t = (s ?? "").replace(/<[^>]+>/g, "").trim();
+    return /[",\n]/.test(t) ? `"${t.replace(/"/g, '""')}"` : t;
+  };
+  const head = (token.header ?? []).map((c: any) => esc(c.text)).join(",");
+  const rows = (token.rows ?? []).map((r: any) =>
+    (Array.isArray(r) ? r : []).map((c: any) => esc(c.text)).join(","),
+  );
+  return [head, ...rows].filter(Boolean).join("\n");
+}
+
+// CSV payloads collected in render order; each table emits a unique
+// placeholder that survives DOMPurify so the payloads can be restored after.
+const csvQueue: string[] = [];
 renderer.table = (token: any) => {
   const headerRow = `<tr>${(token.header ? token.header : []).map((c: any) => renderTableCell(c, true)).join("")}</tr>`;
   // marked's Table token: `header` = header cells, `rows` = body row arrays
   const bodyRows = token.rows ? token.rows.map((r: any) => renderTableRow(r, false)).join("") : "";
-  return `<div class="table-wrap"><table><thead>${headerRow}</thead><tbody>${bodyRows}</tbody></table></div>`;
+  // Tap-to-copy: the csv payload is carried in a hidden textarea (textContent
+  // survives DOMPurify). Multiple tables get ordered placeholders restored
+  // after sanitization so each wrapper keeps its own csv.
+  csvQueue.push(tableToCsv(token));
+  const ph = `TABLECSV_${csvQueue.length}`;
+  return `<div class="table-wrap"><textarea class="table-csv-src" hidden>${ph}</textarea><table><thead>${headerRow}</thead><tbody>${bodyRows}</tbody></table></div>`;
 };
 renderer.code = ({ text, lang }) => {
   const l = String(lang ?? "").trim().toLowerCase();
@@ -126,11 +147,53 @@ renderer.code = ({ text, lang }) => {
 
 /** Parse markdown to sanitized HTML (math/mermaid placeholders included). */
 export function renderRichMd(text: string): string {
+  // Fresh render → fresh queue, so each render's placeholders line up 1:1 with its tables.
+  csvQueue.length = 0;
   const { text: pre, mathMap, mermaidMap } = preprocess(text || "");
   const raw = marked.parse(pre, { renderer, breaks: true, gfm: true }) as string;
   const post = postprocess(raw, mathMap, mermaidMap);
-  const sanitizeFn = typeof DOMPurify.sanitize === "function" ? DOMPurify.sanitize : null;
-  return sanitizeFn ? sanitizeFn(post) : post;
+  // DOMPurify strips `data-*` attributes, so the renderer carries each table's
+  // csv in a hidden <textarea> via ordered placeholders; restore them here so
+  // each wrapper keeps its own data (works even with repeated csv text).
+  let out = post;
+  for (let i = 1; i <= csvQueue.length; i++) {
+    out = out.split(`TABLECSV_${i}`).join(csvQueue[i - 1]);
+  }
+  return out;
+}
+
+/**
+ * Wire tap-to-copy on table wrappers: click/tap anywhere on a table copies
+ * its data as CSV to the clipboard and shows brief "Table copied" feedback.
+ * Call after a message's DOM mounts / updates.
+ */
+export function mountTableCopyHandlers(root: HTMLElement): void {
+  const wraps = root.querySelectorAll<HTMLDivElement>(".table-wrap");
+  wraps.forEach((w) => {
+    if ((w as any).__askyCopyBound) return;
+    (w as any).__askyCopyBound = true;
+    const src = w.querySelector<HTMLTextAreaElement>("textarea.table-csv-src");
+    const csv = src ? src.value : null;
+    w.addEventListener("click", async (e: Event) => {
+      // Ignore clicks that are really selection or link activation.
+      const target = e.target as HTMLElement | null;
+      if (target && (target.closest("a") || (target.tagName || "") === "A")) return;
+      if (!csv) return;
+      try {
+        await navigator.clipboard.writeText(csv);
+      } catch {
+        // Clipboard API unavailable (insecure context) — fail silently.
+        return;
+      }
+      const existed = w.querySelector(".table-copied-hint");
+      if (existed) return; // already showing feedback
+      const hint = document.createElement("div");
+      hint.className = "table-copied-hint";
+      hint.textContent = "Table copied";
+      w.appendChild(hint);
+      setTimeout(() => hint.remove(), 1400);
+    });
+  });
 }
 
 /**

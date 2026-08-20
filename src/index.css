@@ -139,3 +139,18 @@ body {
 /* typing cursor */
 @keyframes blink { 50% { opacity: 0; } }
 .blink-caret::after { content: "▍"; animation: blink 1s infinite; color: var(--asky-accent); }
+
+/* Tap-to-copy tables */
+.msg-body .table-wrap { cursor: pointer; position: relative; }
+.msg-body .table-copied-hint {
+  position: absolute;
+  top: 0.35em;
+  right: 0.5em;
+  background: color-mix(in srgb, var(--asky-accent, #10a37f) 92%, black 8%);
+  color: #fff;
+  font-size: 0.72em;
+  padding: 0.2em 0.55em;
+  border-radius: 999px;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}

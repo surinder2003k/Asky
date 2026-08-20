@@ -1,11 +1,122 @@
 import { useState } from "react";
-import { Check, Eye, EyeOff, Keyboard, Plus, Trash2, X, Mic, Monitor, Search, LogOut } from "lucide-react";
+import { Check, Eye, EyeOff, Keyboard, Plus, Trash2, X, Mic, Monitor, Search, LogOut, KeyRound } from "lucide-react";
 import type { CustomModelDef, Settings, PromptTemplate } from "../storage";
 import { PROVIDER_LABELS } from "../providers";
 import { useApp, hashPin } from "../store";
 import { testApiKey, type StreamCallbacks } from "../ai";
 import type { ProviderKey } from "../providers";
 import { VOICE_LANGUAGES } from "../voice";
+
+/**
+ * Change-password section for the local Asky login.
+ * Verifies the old password first, then stores only the new salted hash
+ * (never the plaintext). Revokes existing sessions so the user must log
+ * in again with the new password.
+ */
+function PasswordSection() {
+  const [oldPw, setOldPw] = useState("");
+  const [newPw, setNewPw] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState<{ text: string; kind: "ok" | "err" } | null>(null);
+  const [showPw, setShowPw] = useState(false);
+
+  const onSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (busy) return;
+    if (newPw.length < 3) {
+      setMsg({ text: "New password must be at least 3 characters.", kind: "err" });
+      return;
+    }
+    if (newPw !== confirm) {
+      setMsg({ text: "New password and confirmation don't match.", kind: "err" });
+      return;
+    }
+    setBusy(true);
+    setMsg(null);
+    try {
+      const { changePassword } = await import("../auth");
+      const res = await changePassword(oldPw, newPw);
+      if (!res.ok) {
+        setMsg({ text: res.error || "Could not change password.", kind: "err" });
+      } else {
+        setMsg({ text: "Password changed. Please sign in again with the new password.", kind: "ok" });
+        setOldPw("");
+        setNewPw("");
+        setConfirm("");
+        // Send the user back to the login page (changePassword revoked the session).
+        try {
+          localStorage.removeItem("asky.sessionToken");
+          setTimeout(() => window.location.reload(), 900);
+        } catch { /* ignore */ }
+      }
+    } catch {
+      setMsg({ text: "Something went wrong. Please try again.", kind: "err" });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <section className="mb-2">
+      <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
+        <KeyRound size={14} /> Change password
+      </h3>
+      <form onSubmit={onSubmit} className="space-y-2">
+        <input
+          type={showPw ? "text" : "password"}
+          value={oldPw}
+          onChange={(e) => setOldPw(e.target.value)}
+          disabled={busy}
+          placeholder="Old password"
+          autoComplete="current-password"
+          className="w-full rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg)] px-3 py-2 text-sm outline-none focus:border-[var(--asky-accent)]"
+        />
+        <input
+          type={showPw ? "text" : "password"}
+          value={newPw}
+          onChange={(e) => setNewPw(e.target.value)}
+          disabled={busy}
+          placeholder="New password (min 3 characters)"
+          autoComplete="new-password"
+          className="w-full rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg)] px-3 py-2 text-sm outline-none focus:border-[var(--asky-accent)]"
+        />
+        <input
+          type={showPw ? "text" : "password"}
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          disabled={busy}
+          placeholder="Confirm new password"
+          autoComplete="new-password"
+          className="w-full rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg)] px-3 py-2 text-sm outline-none focus:border-[var(--asky-accent)]"
+        />
+        <div className="flex items-center gap-3">
+          <button
+            type="submit"
+            disabled={busy}
+            className="rounded-xl bg-[var(--asky-accent)] px-4 py-2 text-sm font-medium text-white hover:bg-[var(--asky-accent-hover)] disabled:opacity-40"
+          >
+            {busy ? "Saving..." : "Change password"}
+          </button>
+          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--asky-fg-muted)]">
+            <input
+              type="checkbox"
+              checked={showPw}
+              onChange={(e) => setShowPw(e.target.checked)}
+              className="accent-[var(--asky-accent)]"
+            />
+            Show passwords
+          </label>
+        </div>
+        {msg && (
+          <p className={`text-xs ${msg.kind === "ok" ? "text-green-400" : "text-red-400"}`}>
+            {msg.text}
+          </p>
+        )}
+      </form>
+    </section>
+  );
+}
 
 const SHORTCUTS: { keys: string; label: string }[] = [
   { keys: "Ctrl+K", label: "New chat" },
@@ -524,6 +635,9 @@ export default function SettingsModal({ onClose, onLogout }: { onClose: () => vo
               className="w-full rounded-xl border border-[var(--asky-border)] bg-[var(--asky-bg)] px-3 py-2 text-sm outline-none focus:border-[var(--asky-accent)]"
             />
           </section>
+
+          {/* Change password */}
+          <PasswordSection />
 
           {onLogout && (
             <section className="mb-2 mt-4 border-t border-[var(--asky-border)] pt-4">

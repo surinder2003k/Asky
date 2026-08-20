@@ -237,6 +237,8 @@ export default function ChatScreen({
   useLayoutEffect(() => {
     requestAnimationFrame(async () => {
       mountCodePreviews();
+      const { mountTableCopyHandlers } = await import("../richMd");
+      mountTableCopyHandlers(document.body);
       try {
         const { renderMermaidBlocks } = await import("../richMd");
         await renderMermaidBlocks(document.body);

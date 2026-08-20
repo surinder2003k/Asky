@@ -53,9 +53,40 @@ def main():
         # Seed AFTER the page loads, then reload so the app hydrates from it.
         page.goto(BASE, wait_until="domcontentloaded", timeout=30000)
         page.wait_for_timeout(1500)
+        # Batch-88 login gate: pass the landing page first.
+        if page.locator("text=Welcome back").first.is_visible():
+            page.fill('input[autocomplete="username"]', "Sunny")
+            page.fill('input[autocomplete="current-password"]', "3424")
+            page.click("button[type=submit]")
+            page.wait_for_timeout(1500)
         page.evaluate(SEED_JS)
         page.reload(wait_until="domcontentloaded", timeout=30000)
         page.wait_for_timeout(2000)
+
+        # Batch-87 homepage policy: the app no longer auto-restores the last
+        # chat — open the seeded chat explicitly from the sidebar first.
+        opened_row = False
+        try:
+            row = page.get_by_text("Table audit").first
+            page.evaluate("(el) => { if (el && typeof el.scrollIntoViewIfNeeded === 'function') el.scrollIntoViewIfNeeded({ block: 'center' }); }", row.element_handle())
+            row.click(force=True)
+            page.wait_for_timeout(800)
+            opened_row = True
+        except Exception:
+            pass
+        if not opened_row:
+            try:
+                toggle = page.locator('button[title="Open sidebar"]')
+                if toggle.count():
+                    toggle.click()
+                    page.wait_for_timeout(400)
+                row = page.get_by_text("Table audit").first
+                page.evaluate("(el) => { if (el && typeof el.scrollIntoViewIfNeeded === 'function') el.scrollIntoViewIfNeeded({ block: 'center' }); }", row.element_handle())
+                row.click(force=True)
+                page.wait_for_timeout(800)
+                opened_row = True
+            except Exception as exc:
+                print("WARN: could not open seeded chat:", exc)
 
         # Debug: check localStorage state and whether the chat screen is mounted.
         dbg = page.evaluate("""() => ({
