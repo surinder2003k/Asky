@@ -36,9 +36,9 @@ function PasswordSection() {
     setMsg(null);
     try {
       const { changePassword } = await import("../auth");
-      const res = await changePassword(oldPw, newPw);
+      const res = await (changePassword as any)(oldPw, newPw);
       if (!res.ok) {
-        setMsg({ text: res.error || "Could not change password.", kind: "err" });
+        setMsg({ text: (res as any).error || "Could not change password.", kind: "err" });
       } else {
         setMsg({ text: "Password changed. Please sign in again with the new password.", kind: "ok" });
         setOldPw("");
@@ -134,7 +134,7 @@ const PROVIDER_META: { key: ProviderKey; label: string; envHint: string; getApiU
   { key: "gemini", label: "Gemini", envHint: "aistudio.google.com", getApiUrl: "https://aistudio.google.com/app/apikey" },
 ];
 
-export default function SettingsModal({ onClose, onLogout }: { onClose: () => void; onLogout?: () => void }) {
+export default function SettingsModal({ onClose }: { onClose: () => void }) {
   const {
     settings,
     setApiKeys,
@@ -636,26 +636,7 @@ export default function SettingsModal({ onClose, onLogout }: { onClose: () => vo
             />
           </section>
 
-          {/* Change password */}
-          <PasswordSection />
-
-          {onLogout && (
-            <section className="mb-2 mt-4 border-t border-[var(--asky-border)] pt-4">
-              <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold">
-                <LogOut size={14} /> Session
-              </h3>
-              <p className="mb-2 text-xs text-[var(--asky-fg-muted)]">
-                Signing out takes you back to the login page. Your chats and settings
-                stay safe on this device.
-              </p>
-              <button
-                onClick={onLogout}
-                className="rounded-xl border border-red-500/30 px-4 py-2 text-sm text-red-400 hover:bg-red-500/10"
-              >
-                Log out
-              </button>
-            </section>
-          )}
+{/* Auth sections removed */}
         </div>
       </div>
     </div>

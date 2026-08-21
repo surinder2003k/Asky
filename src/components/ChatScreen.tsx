@@ -106,11 +106,9 @@ const STATIC_SUGGESTIONS = [
 export default function ChatScreen({
   onToggleSidebar,
   onOpenSettings,
-  onLogout,
 }: {
   onToggleSidebar: () => void;
   onOpenSettings: () => void;
-  onLogout?: () => void;
 }) {
   const {
     chats,
@@ -523,18 +521,7 @@ export default function ChatScreen({
   if (!chat) {
     return (
       <div className="flex h-full flex-col">
-        <div className="flex items-center justify-end gap-1 px-3 pt-2">
-          {onLogout && (
-            <button
-              onClick={onLogout}
-              className="flex items-center gap-1.5 rounded-md px-2 py-1.5 text-xs text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)] hover:text-[var(--asky-error)]"
-              title="Log out"
-              aria-label="Log out"
-            >
-              <LogOut size={15} /> Log out
-            </button>
-          )}
-        </div>
+{/* Logout removed */}
         <div className="flex h-full flex-col items-center justify-center gap-6 overflow-y-auto p-6">
           <div className="flex h-14 w-14 items-center justify-center rounded-full bg-[var(--asky-accent-soft)]">
             <Sparkles size={26} className="text-[var(--asky-accent)]" />
@@ -818,16 +805,7 @@ export default function ChatScreen({
       >
         <Settings size={17} />
       </button>
-      {onLogout && (
-        <button
-          onClick={onLogout}
-          className="rounded-md p-2 text-[var(--asky-fg-muted)] hover:bg-[var(--asky-hover)] hover:text-[var(--asky-error)]"
-          title="Log out"
-          aria-label="Log out"
-        >
-          <LogOut size={18} />
-        </button>
-      )}
+{/* Logout removed */}
       </header>
       {chatSettingsOpen && (
         <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/50 p-4" onClick={() => setChatSettingsOpen(false)}>

@@ -374,3 +374,11 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] "Remember this device" toggle at login (default ON, 30d; OFF = session only — session cleared on revisit)
 - [x] Table tap-to-copy: tap a markdown table to copy its data as CSV/TSV to clipboard with visual feedback ("Table copied" hint; mobile + desktop); csvQueue reset added to renderRichMd so placeholders never accumulate across renders
 - [x] Verify all flows desktop + mobile: login_audit 11 checks ALL-PASS, changepw_audit 9 checks ALL-PASS, tap_copy_audit ALL-PASS, homepage_load_audit ALL-PASS, table_mobile_audit ALL-TABLE-CHECKS-PASS; tsc clean; vitest 108/109 (1 known nvidia provider-network flake, unchanged)
+
+## Batch 90 (2026-08-20) — Remove Authentication
+- [x] Remove LandingPage.tsx and its gate in App.tsx (site now opens directly to chat)
+- [x] Clean up auth.ts (replaced with stub, all auth methods now no-op or return true)
+- [x] Remove "Change Password" and "Log Out" from SettingsModal.tsx and headers (UI is clean)
+- [x] Clean up localStorage (audits updated to not require session tokens)
+- [x] Update audits to expect direct access (homepage_load_audit, tap_copy_audit, table_mobile_audit ALL-PASS)
+- [x] Sync GitHub website branch + deliver

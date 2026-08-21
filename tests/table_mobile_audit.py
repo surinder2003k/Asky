@@ -53,12 +53,7 @@ def main():
         # Seed AFTER the page loads, then reload so the app hydrates from it.
         page.goto(BASE, wait_until="domcontentloaded", timeout=30000)
         page.wait_for_timeout(1500)
-        # Batch-88 login gate: pass the landing page first.
-        if page.locator("text=Welcome back").first.is_visible():
-            page.fill('input[autocomplete="username"]', "Sunny")
-            page.fill('input[autocomplete="current-password"]', "3424")
-            page.click("button[type=submit]")
-            page.wait_for_timeout(1500)
+
         page.evaluate(SEED_JS)
         page.reload(wait_until="domcontentloaded", timeout=30000)
         page.wait_for_timeout(2000)

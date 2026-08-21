@@ -65,13 +65,6 @@ def main():
         page.goto(BASE, wait_until="networkidle")
         page.wait_for_timeout(1500)
 
-        # Batch-88 login gate: log in first so the app actually reaches the
-        # chat screen (the test page must pass the landing page).
-        if page.locator("text=Welcome back").first.is_visible():
-            page.fill('input[autocomplete="username"]', "Sunny")
-            page.fill('input[autocomplete="current-password"]', "3424")
-            page.click("button[type=submit]")
-            page.wait_for_timeout(1500)
         page.reload(wait_until="networkidle")
         page.wait_for_timeout(1500)
 
