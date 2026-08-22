@@ -382,3 +382,13 @@ OpenCode Zen upstream 429 confirmed via direct curl too — provider-side.
 - [x] Clean up localStorage (audits updated to not require session tokens)
 - [x] Update audits to expect direct access (homepage_load_audit, tap_copy_audit, table_mobile_audit ALL-PASS)
 - [x] Sync GitHub website branch + deliver
+
+## Batch 91 (2026-08-22) — Clerk Authentication & Multi-User Cloud Storage
+- [ ] Install Clerk frontend (`@clerk/clerk-react`) and backend (`@clerk/clerk-sdk-node`) dependencies
+- [ ] Configure Clerk environment variables via `webdev_request_secrets`
+- [ ] Wrap `App.tsx` with `ClerkProvider` and implement `<SignedIn>` / `<SignedOut>` gates
+- [ ] Create database schema for `chats`, `messages`, and `user_settings` (linked to `clerkId`)
+- [ ] Migrate storage logic from `localStorage` to tRPC + Database
+- [ ] Re-audit model health and add new OpenCode Zen free models
+- [ ] Verify multi-user isolation (User A cannot see User B's data)
+- [ ] Sync to GitHub `website` branch and deliver final secure app

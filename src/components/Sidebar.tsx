@@ -24,6 +24,7 @@ import { useMemo } from "react";
 import { useApp } from "../store";
 import { clearConversations } from "../storage";
 import { decodeShareString, parseSharedMessages, downloadMarkdown, downloadJson, downloadTxt, chatWordCount, buildShareUrl, exportChatToWhatsApp, exportAllChatsZip } from "../export";
+import { UserButton } from "@clerk/clerk-react";
 import { exportChatToPdf } from "../pdf";
 import { exportChatToWord } from "../word";
 import { downloadChatPng } from "../png";
@@ -398,7 +399,10 @@ export default function Sidebar({
             </div>
           ) : (
             <div className="flex items-center justify-between text-xs text-[var(--asky-fg-muted)]">
-              <span>Auto-delete 5d</span>
+              <div className="flex items-center gap-2">
+                <UserButton afterSignOutUrl="/" />
+                <span>Cloud Sync</span>
+              </div>
               <div className="flex gap-1">
                 <button
                   className="rounded-md p-1.5 hover:bg-[var(--asky-hover2)] hover:text-[var(--asky-fg)]"

@@ -1,9 +1,9 @@
 import { createTRPCReact } from "@trpc/react-query";
 import { httpBatchLink } from "@trpc/client";
 import superjson from "superjson";
-import type { AppRouter } from "@/server/routers";
-import { getApiBaseUrl } from "@/constants/oauth";
-import * as Auth from "@/lib/_core/auth";
+import type { AppRouter } from "../server/routers";
+import { getApiBaseUrl } from "../constants/oauth";
+import * as Auth from "./_core/auth";
 
 /**
  * tRPC React client for type-safe API calls.
@@ -18,6 +18,12 @@ export const trpc = createTRPCReact<AppRouter>();
  * Creates the tRPC client with proper configuration.
  * Call this once in your app's root layout.
  */
+let clerkTokenProvider: (() => Promise<string | null>) | null = null;
+
+export function setClerkTokenProvider(provider: () => Promise<string | null>) {
+  clerkTokenProvider = provider;
+}
+
 export function createTRPCClient() {
   return trpc.createClient({
     links: [
@@ -26,11 +32,16 @@ export function createTRPCClient() {
         // tRPC v11: transformer MUST be inside httpBatchLink, not at root
         transformer: superjson,
         async headers() {
-          const token = await Auth.getSessionToken();
+          let token = null;
+          if (clerkTokenProvider) {
+            token = await clerkTokenProvider();
+          } else {
+            token = await Auth.getSessionToken();
+          }
           return token ? { Authorization: `Bearer ${token}` } : {};
         },
         // Custom fetch to include credentials for cookie-based auth
-        fetch(url, options) {
+        fetch(url: any, options: any) {
           return fetch(url, {
             ...options,
             credentials: "include",

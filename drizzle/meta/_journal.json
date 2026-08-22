@@ -22,6 +22,13 @@
       "when": 1786533853165,
       "tag": "0002_brief_enchantress",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1787377261483,
+      "tag": "0003_round_white_tiger",
+      "breakpoints": true
     }
   ]
 }

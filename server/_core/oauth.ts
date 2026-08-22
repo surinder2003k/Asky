@@ -1,6 +1,6 @@
 import { COOKIE_NAME, ONE_YEAR_MS } from "../../shared/const.js";
 import type { Express, Request, Response } from "express";
-import { getUserByOpenId, upsertUser } from "../db";
+import { getUserByClerkId, upsertUser } from "../db";
 import { getSessionCookieOptions } from "./cookies";
 import { sdk } from "./sdk";
 
@@ -10,31 +10,27 @@ function getQueryParam(req: Request, key: string): string | undefined {
 }
 
 async function syncUser(userInfo: {
-  openId?: string | null;
+  clerkId?: string | null;
   name?: string | null;
   email?: string | null;
-  loginMethod?: string | null;
-  platform?: string | null;
 }) {
-  if (!userInfo.openId) {
-    throw new Error("openId missing from user info");
+  if (!userInfo.clerkId) {
+    throw new Error("clerkId missing from user info");
   }
 
   const lastSignedIn = new Date();
   await upsertUser({
-    openId: userInfo.openId,
+    clerkId: userInfo.clerkId,
     name: userInfo.name || null,
     email: userInfo.email ?? null,
-    loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
     lastSignedIn,
   });
-  const saved = await getUserByOpenId(userInfo.openId);
+  const saved = await getUserByClerkId(userInfo.clerkId);
   return (
     saved ?? {
-      openId: userInfo.openId,
+      clerkId: userInfo.clerkId,
       name: userInfo.name,
       email: userInfo.email,
-      loginMethod: userInfo.loginMethod ?? null,
       lastSignedIn,
     }
   );
@@ -42,21 +38,19 @@ async function syncUser(userInfo: {
 
 function buildUserResponse(
   user:
-    | Awaited<ReturnType<typeof getUserByOpenId>>
+    | Awaited<ReturnType<typeof getUserByClerkId>>
     | {
-        openId: string;
+        clerkId: string;
         name?: string | null;
         email?: string | null;
-        loginMethod?: string | null;
         lastSignedIn?: Date | null;
       },
 ) {
   return {
     id: (user as any)?.id ?? null,
-    openId: user?.openId ?? null,
+    clerkId: user?.clerkId ?? null,
     name: user?.name ?? null,
     email: user?.email ?? null,
-    loginMethod: user?.loginMethod ?? null,
     lastSignedIn: (user?.lastSignedIn ?? new Date()).toISOString(),
   };
 }
@@ -140,7 +134,7 @@ export function registerOAuthRoutes(app: Express) {
       const user = await sdk.authenticateRequest(req);
       res.json({ user: buildUserResponse(user) });
     } catch (error) {
-      console.error("[Auth] /api/auth/me failed:", error);
+      // Don't log expected 401s
       res.status(401).json({ error: "Not authenticated", user: null });
     }
   });

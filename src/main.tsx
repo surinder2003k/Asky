@@ -1,8 +1,27 @@
-import { StrictMode } from "react";
+import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { trpc, createTRPCClient } from "../lib/trpc";
 import App from "./App";
 import "./index.css";
+
+function Root() {
+  const [queryClient] = useState(() => new QueryClient({}));
+  const [trpcClient] = useState(() => createTRPCClient());
+
+  return (
+    <trpc.Provider client={trpcClient} queryClient={queryClient}>
+      <QueryClientProvider client={queryClient}>
+        <BrowserRouter>
+          <Routes>
+            <Route path="*" element={<App />} />
+          </Routes>
+        </BrowserRouter>
+      </QueryClientProvider>
+    </trpc.Provider>
+  );
+}
 
 /* Offline-first: register the service worker in production so the site
  * loads even with no internet, showing the in-app offline banner instead
@@ -21,10 +40,6 @@ if (
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <BrowserRouter>
-      <Routes>
-        <Route path="*" element={<App />} />
-      </Routes>
-    </BrowserRouter>
+    <Root />
   </StrictMode>,
 );

@@ -7,6 +7,9 @@ import { SignJWT, jwtVerify } from "jose";
 import type { User } from "../../drizzle/schema";
 import * as db from "../db";
 import { ENV } from "./env";
+import { createClerkClient } from "@clerk/clerk-sdk-node";
+
+const clerkClient = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 import type {
   ExchangeTokenRequest,
   ExchangeTokenResponse,
@@ -232,62 +235,50 @@ class SDKServer {
   }
 
   async authenticateRequest(req: Request): Promise<AuthenticatedUser> {
-    // Regular authentication flow
     const authHeader = req.headers.authorization || req.headers.Authorization;
     let token: string | undefined;
     if (typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
       token = authHeader.slice("Bearer ".length).trim();
     }
 
-    const cookies = this.parseCookies(req.headers.cookie);
-    const sessionCookie = token || cookies.get(COOKIE_NAME);
-    const session = await this.verifySession(sessionCookie);
-
-    if (!session) {
-      throw ForbiddenError("Invalid session cookie");
+    if (!token) {
+      throw ForbiddenError("Missing Clerk session token");
     }
 
-    if (session.openId.startsWith(CRON_OPEN_ID_PREFIX)) {
-      const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
-      const taskUid = userInfo.taskUid ?? null;
-      if (!taskUid) {
-        throw ForbiddenError("Cron session missing task_uid");
-      }
-      return buildCronUser(userInfo);
-    }
+    try {
+      // Verify Clerk session token
+      const sessionClaims = await clerkClient.verifyToken(token);
+      const clerkId = sessionClaims.sub;
 
-    const sessionUserId = session.openId;
-    const signedInAt = new Date();
-    let user = await db.getUserByOpenId(sessionUserId);
+      let user = await db.getUserByClerkId(clerkId);
+      const signedInAt = new Date();
 
-    // If user not in DB, sync from OAuth server automatically
-    if (!user) {
-      try {
-        const userInfo = await this.getUserInfoWithJwt(sessionCookie ?? "");
+      if (!user) {
+        // Fetch full user info from Clerk
+        const clerkUser = await clerkClient.users.getUser(clerkId);
+        const email = clerkUser.emailAddresses[0]?.emailAddress || null;
+        const name = `${clerkUser.firstName || ""} ${clerkUser.lastName || ""}`.trim() || null;
+
         await db.upsertUser({
-          openId: userInfo.openId,
-          name: userInfo.name || null,
-          email: userInfo.email ?? null,
-          loginMethod: userInfo.loginMethod ?? userInfo.platform ?? null,
+          clerkId,
+          name,
+          email,
           lastSignedIn: signedInAt,
         });
-        user = await db.getUserByOpenId(userInfo.openId);
-      } catch (error) {
-        console.error("[Auth] Failed to sync user from OAuth:", error);
-        throw ForbiddenError("Failed to sync user info");
+        user = await db.getUserByClerkId(clerkId);
+      } else {
+        await db.upsertUser({
+          clerkId,
+          lastSignedIn: signedInAt,
+        });
       }
+
+      if (!user) throw ForbiddenError("User not found after sync");
+      return user;
+    } catch (error) {
+      console.error("[Auth] Clerk authentication failed:", error);
+      throw ForbiddenError("Invalid Clerk session");
     }
-
-    if (!user) {
-      throw ForbiddenError("User not found");
-    }
-
-    await db.upsertUser({
-      openId: user.openId,
-      lastSignedIn: signedInAt,
-    });
-
-    return user;
   }
 }
 
@@ -303,10 +294,9 @@ function buildCronUser(userInfo: GetUserInfoWithJwtResponse): AuthenticatedUser 
   const now = new Date();
   return {
     id: -1,
-    openId: userInfo.openId,
+    clerkId: `cron_${userInfo.openId}`,
     name: userInfo.name || "Manus Scheduled Task",
     email: null,
-    loginMethod: null,
     role: "user",
     createdAt: now,
     updatedAt: now,

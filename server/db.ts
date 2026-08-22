@@ -1,6 +1,6 @@
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
-import { chatSessions, conversationsCloud, InsertUser, users } from "../drizzle/schema";
+import { conversations, folders, InsertUser, users, userSettings } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
 let _db: ReturnType<typeof drizzle> | null = null;
@@ -19,8 +19,8 @@ export async function getDb() {
 }
 
 export async function upsertUser(user: InsertUser): Promise<void> {
-  if (!user.openId) {
-    throw new Error("User openId is required for upsert");
+  if (!user.clerkId) {
+    throw new Error("User clerkId is required for upsert");
   }
 
   const db = await getDb();
@@ -31,11 +31,11 @@ export async function upsertUser(user: InsertUser): Promise<void> {
 
   try {
     const values: InsertUser = {
-      openId: user.openId,
+      clerkId: user.clerkId,
     };
     const updateSet: Record<string, unknown> = {};
 
-    const textFields = ["name", "email", "loginMethod"] as const;
+    const textFields = ["name", "email"] as const;
     type TextField = (typeof textFields)[number];
 
     const assignNullable = (field: TextField) => {
@@ -55,7 +55,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     if (user.role !== undefined) {
       values.role = user.role;
       updateSet.role = user.role;
-    } else if (user.openId === ENV.ownerOpenId) {
+    } else if (user.clerkId === ENV.ownerOpenId) {
       values.role = "admin";
       updateSet.role = "admin";
     }
@@ -77,149 +77,104 @@ export async function upsertUser(user: InsertUser): Promise<void> {
   }
 }
 
-export async function getUserByOpenId(openId: string) {
+export async function getUserByClerkId(clerkId: string) {
   const db = await getDb();
   if (!db) {
     console.warn("[Database] Cannot get user: database not available");
     return undefined;
   }
 
-  const result = await db.select().from(users).where(eq(users.openId, openId)).limit(1);
+  const result = await db.select().from(users).where(eq(users.clerkId, clerkId)).limit(1);
 
   return result.length > 0 ? result[0] : undefined;
 }
 
 // ------------------------------------------------------------------
-// Anonymous cloud chat sync (sessionId-scoped, no login required)
+// User-scoped cloud chat sync (Clerk-authenticated)
 // ------------------------------------------------------------------
 
-export type SyncPushItem = {
-  convId: string;
-  title?: string | null;
-  modelKey?: string | null;
-  messagesJson?: string | null;
-  updatedAt: string; // epoch ms as decimal string
-};
-
-export type SyncPullItem = {
-  convId: string;
-  title: string | null;
-  modelKey: string | null;
-  messagesJson: string | null;
-  updatedAt: string;
-};
-
-export async function ensureSession(sessionId: string, appVersion?: string) {
+export async function getUserSettings(userId: number) {
   const db = await getDb();
-  if (!db) return;
-  try {
-    await db
-      .insert(chatSessions)
-      .values({ sessionId, appVersion: appVersion ?? null })
-      .onDuplicateKeyUpdate({
-        set: {
-          lastSeenAt: new Date(),
-          appVersion: appVersion ?? sql`appVersion`,
-        },
-      });
-  } catch (error) {
-    console.error("[Database] ensureSession failed:", error);
-  }
+  if (!db) return null;
+  const result = await db.select().from(userSettings).where(eq(userSettings.userId, userId)).limit(1);
+  return result.length > 0 ? JSON.parse(result[0].settingsJson) : null;
 }
 
-/**
- * Push local changes and pull remote changes in one round-trip.
- * Upsert only wins when incoming updatedAt is strictly greater (per convId).
- * Rows untouched for 90+ days are cleaned up to keep the table small.
- */
-export async function syncChats(
-  sessionId: string,
-  push: SyncPushItem[],
-  deletedIds: string[],
-): Promise<SyncPullItem[]> {
+export async function saveUserSettings(userId: number, settings: any) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(userSettings).values({
+    userId,
+    settingsJson: JSON.stringify(settings),
+  }).onDuplicateKeyUpdate({
+    set: { settingsJson: JSON.stringify(settings) },
+  });
+}
+
+export async function getUserChats(userId: number) {
   const db = await getDb();
   if (!db) return [];
+  return await db.select().from(conversations).where(eq(conversations.userId, userId));
+}
 
-  // 1. Upsert pushed items — only update when incoming is newer
-  for (const item of push) {
-    const existing = await db
-      .select()
-      .from(conversationsCloud)
-      .where(
-        and(
-          eq(conversationsCloud.sessionId, sessionId),
-          eq(conversationsCloud.convId, item.convId),
-        ),
-      )
-      .limit(1);
+export async function saveChat(userId: number, chat: any) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(conversations).values({
+    userId,
+    convId: chat.id,
+    folderId: chat.folderId || null,
+    title: chat.title || null,
+    modelKey: chat.modelKey || null,
+    systemPrompt: chat.systemPrompt || null,
+    pinned: chat.pinned ? 1 : 0,
+    messagesJson: JSON.stringify(chat.messages),
+    updatedAt: new Date(chat.updatedAt || Date.now()),
+  }).onDuplicateKeyUpdate({
+    set: {
+      folderId: chat.folderId || null,
+      title: chat.title || null,
+      modelKey: chat.modelKey || null,
+      systemPrompt: chat.systemPrompt || null,
+      pinned: chat.pinned ? 1 : 0,
+      messagesJson: JSON.stringify(chat.messages),
+      updatedAt: new Date(chat.updatedAt || Date.now()),
+    },
+  });
+}
 
-    const incomingTs = parseInt(item.updatedAt, 10);
-    const existingTs = existing.length > 0 ? parseInt(existing[0].updatedAt, 10) : -1;
+export async function deleteChatById(userId: number, convId: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(conversations).where(and(eq(conversations.userId, userId), eq(conversations.convId, convId)));
+}
 
-    if (existing.length === 0) {
-      await db.insert(conversationsCloud).values({
-        sessionId,
-        convId: item.convId,
-        title: item.title ?? null,
-        modelKey: item.modelKey ?? null,
-        messagesJson: item.messagesJson ?? null,
-        updatedAt: item.updatedAt,
-      });
-    } else if (incomingTs > existingTs) {
-      await db
-        .update(conversationsCloud)
-        .set({
-          title: item.title ?? null,
-          modelKey: item.modelKey ?? null,
-          messagesJson: item.messagesJson ?? null,
-          updatedAt: item.updatedAt,
-        })
-        .where(
-          and(
-            eq(conversationsCloud.sessionId, sessionId),
-            eq(conversationsCloud.convId, item.convId),
-          ),
-        );
-    }
-  }
+export async function getUserFolders(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return await db.select().from(folders).where(eq(folders.userId, userId));
+}
 
-  // 2. Delete conversation ids marked as removed locally
-  if (deletedIds.length > 0) {
-    await db
-      .delete(conversationsCloud)
-      .where(
-        and(
-          eq(conversationsCloud.sessionId, sessionId),
-          inArray(conversationsCloud.convId, deletedIds),
-        ),
-      );
-  }
+export async function saveFolder(userId: number, folder: any) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(folders).values({
+    userId,
+    folderId: folder.id,
+    name: folder.name,
+    color: folder.color || null,
+    order: folder.order || 0,
+  }).onDuplicateKeyUpdate({
+    set: {
+      name: folder.name,
+      color: folder.color || null,
+      order: folder.order || 0,
+    },
+  });
+}
 
-  // 3. Pull every row for this session (client merges by updatedAt)
-  const rows = await db
-    .select()
-    .from(conversationsCloud)
-    .where(eq(conversationsCloud.sessionId, sessionId));
-
-  // 4. Periodic cleanup: remove rows untouched for 90+ days
-  try {
-    await db
-      .delete(conversationsCloud)
-      .where(
-        and(
-          eq(conversationsCloud.sessionId, sessionId),
-          sql`lastModifiedAt < DATE_SUB(NOW(), INTERVAL 90 DAY)`,
-        ),
-      );
-  } catch {
-    /* table may lack the column; cleanup is best-effort */
-  }
-
-  return rows.map((r) => ({
-    convId: r.convId,
-    title: r.title,
-    modelKey: r.modelKey,
-    messagesJson: r.messagesJson,
-    updatedAt: r.updatedAt,
-  }));
+export async function deleteFolderById(userId: number, folderId: string) {
+  const db = await getDb();
+  if (!db) return;
+  await db.delete(folders).where(and(eq(folders.userId, userId), eq(folders.folderId, folderId)));
 }

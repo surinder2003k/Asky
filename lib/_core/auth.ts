@@ -1,6 +1,12 @@
-import * as SecureStore from "expo-secure-store";
-import { Platform } from "react-native";
-import { SESSION_TOKEN_KEY, USER_INFO_KEY } from "@/constants/oauth";
+// import * as SecureStore from "expo-secure-store";
+// import { Platform } from "react-native";
+import { SESSION_TOKEN_KEY, USER_INFO_KEY } from "../../constants/oauth";
+const Platform = { OS: "web" };
+const SecureStore = {
+  getItemAsync: async (k: string) => localStorage.getItem(k),
+  setItemAsync: async (k: string, v: string) => localStorage.setItem(k, v),
+  deleteItemAsync: async (k: string) => localStorage.removeItem(k),
+};
 
 export type User = {
   id: number;
@@ -13,19 +19,15 @@ export type User = {
 
 export async function getSessionToken(): Promise<string | null> {
   try {
-    // Web platform uses cookie-based auth, no manual token management needed
+    // Web platform uses Clerk token retrieval
     if (Platform.OS === "web") {
-      console.log("[Auth] Web platform uses cookie-based auth, skipping token retrieval");
+      // We will handle this in the App context by passing the token to trpc
       return null;
     }
 
     // Use SecureStore for native
     console.log("[Auth] Getting session token...");
     const token = await SecureStore.getItemAsync(SESSION_TOKEN_KEY);
-    console.log(
-      "[Auth] Session token retrieved from SecureStore:",
-      token ? `present (${token.substring(0, 20)}...)` : "missing",
-    );
     return token;
   } catch (error) {
     console.error("[Auth] Failed to get session token:", error);

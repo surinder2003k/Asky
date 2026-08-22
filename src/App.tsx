@@ -8,7 +8,14 @@ import ChatScreen from "./components/ChatScreen";
 import SettingsModal from "./components/SettingsModal";
 import PinScreen from "./components/PinScreen";
 import OfflineNotice, { useIsOffline } from "./components/OfflineNotice";
-// LandingPage and auth imports removed as per user request to disable authentication
+import { ClerkProvider, SignedIn, SignedOut, SignIn, useAuth } from "@clerk/clerk-react";
+import { setClerkTokenProvider } from "../lib/trpc";
+
+const CLERK_PUBLISHABLE_KEY = import.meta.env.VITE_CLERK_PUBLISHABLE_KEY;
+
+if (!CLERK_PUBLISHABLE_KEY) {
+  throw new Error("Missing Publishable Key");
+}
 /**
  * Catches any render-time crash and shows a friendly recovery screen instead
  * of a blank page. Also offers clearing corrupted storage state, which is a
@@ -136,11 +143,17 @@ class ErrorBoundary extends Component<
   }
 }
 function Shell() {
+  const { getToken } = useAuth();
   const { settings, importChat, newChat, isLoaded } = useApp();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [unlocked, setUnlocked] = useState(!settings.pinEnabled);
   const shareHandled = useRef(false);
+
+  // Set the token provider for tRPC
+  useEffect(() => {
+    setClerkTokenProvider(() => getToken());
+  }, [getToken]);
 
   // Hydrate a shared chat from ?share= (or #share=) URL parameter on first load.
   useEffect(() => {
@@ -229,9 +242,23 @@ function Shell() {
 export default function App() {
   return (
     <ErrorBoundary>
-      <AppProvider>
-        <Shell />
-      </AppProvider>
+      <ClerkProvider
+        publishableKey={CLERK_PUBLISHABLE_KEY}
+        appearance={{
+          variables: { colorPrimary: "#00c2ff" },
+        }}
+      >
+        <AppProvider>
+          <SignedIn>
+            <Shell />
+          </SignedIn>
+          <SignedOut>
+            <div className="flex min-h-dvh items-center justify-center bg-[var(--asky-bg)] p-6">
+              <SignIn routing="hash" />
+            </div>
+          </SignedOut>
+        </AppProvider>
+      </ClerkProvider>
     </ErrorBoundary>
   );
 }

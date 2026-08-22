@@ -120,6 +120,10 @@ def main():
     EXCLUDE = {
         "scripts/sanitize-for-github.py",  # contains a stale PAT -> 422 on POST
         "tests/__pycache__/table_mobile_audit.cpython-312.pyc",
+        "src/credentials.ts",
+        "notes-batch89.md",
+        "notes-batch90.md",
+        "notes-batch91.md",
     }
     to_add = []
     for path in sorted(local_files):
@@ -170,7 +174,7 @@ def main():
 
     print("Creating commit...")
     commit = post("/git/commits", {
-        "message": "Batch 62 sync (website project snapshot with all improvements) via API",
+        "message": "Batch 91 sync: Clerk Auth + Multi-User Cloud Storage + New Free Models",
         "tree": tree_sha,
         "parents": [base_sha],
     })

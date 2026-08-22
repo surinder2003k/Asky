@@ -6,16 +6,10 @@ import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-or
  * Columns use camelCase to match both database fields and generated types.
  */
 export const users = mysqlTable("users", {
-  /**
-   * Surrogate primary key. Auto-incremented numeric value managed by the database.
-   * Use this for relations between tables.
-   */
   id: int("id").autoincrement().primaryKey(),
-  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
-  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  clerkId: varchar("clerkId", { length: 255 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
-  loginMethod: varchar("loginMethod", { length: 64 }),
   role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
@@ -25,33 +19,41 @@ export const users = mysqlTable("users", {
 export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
-/**
- * Anonymous device sessions for cloud chat sync (no login required).
- * Each app install generates a random sessionId and scopes all cloud data to it.
- */
-export const chatSessions = mysqlTable("chat_sessions", {
+export const userSettings = mysqlTable("user_settings", {
   id: int("id").autoincrement().primaryKey(),
-  sessionId: varchar("sessionId", { length: 64 }).notNull().unique(),
-  appVersion: varchar("appVersion", { length: 32 }),
-  createdAt: timestamp("createdAt").defaultNow().notNull(),
-  lastSeenAt: timestamp("lastSeenAt").defaultNow().onUpdateNow().notNull(),
+  userId: int("userId").notNull().unique(),
+  settingsJson: text("settingsJson").notNull(), // Stores API keys, themes, etc.
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
-/**
- * Cloud-stored conversations, keyed by (sessionId, convId) so the client can
- * push/pull using its own conversation ids.
- */
-export const conversationsCloud = mysqlTable("conversations_cloud", {
+export const folders = mysqlTable("folders", {
   id: int("id").autoincrement().primaryKey(),
-  sessionId: varchar("sessionId", { length: 64 }).notNull(),
+  userId: int("userId").notNull(),
+  folderId: varchar("folderId", { length: 32 }).notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  color: varchar("color", { length: 20 }),
+  order: int("order").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export const conversations = mysqlTable("conversations", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
   convId: varchar("convId", { length: 32 }).notNull(),
+  folderId: varchar("folderId", { length: 32 }),
   title: varchar("title", { length: 255 }),
   modelKey: varchar("modelKey", { length: 128 }),
-  messagesJson: text("messagesJson"),
-  updatedAt: varchar("updatedAt", { length: 20 }).notNull(),
+  systemPrompt: text("systemPrompt"),
+  pinned: int("pinned").default(0).notNull(), // 0 or 1
+  messagesJson: text("messagesJson").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });
 
-export type ChatSession = typeof chatSessions.$inferSelect;
-export type InsertChatSession = typeof chatSessions.$inferInsert;
-export type ConversationCloud = typeof conversationsCloud.$inferSelect;
-export type InsertConversationCloud = typeof conversationsCloud.$inferInsert;
+export type UserSetting = typeof userSettings.$inferSelect;
+export type InsertUserSetting = typeof userSettings.$inferInsert;
+export type Folder = typeof folders.$inferSelect;
+export type InsertFolder = typeof folders.$inferInsert;
+export type Conversation = typeof conversations.$inferSelect;
+export type InsertConversation = typeof conversations.$inferInsert;
